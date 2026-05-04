@@ -1,39 +1,41 @@
-# arif: Auto-Research In Few-lines 🦴
+# arif: Auto-Research In Few-lines
+
+This repository enables users to build customized automated research loops with just a few lines of Python, striking an effective balance between creative freedom and experimental control. Crucially, you can direct your coding agent to use `arif` to autonomously construct and monitor its own research workflows.
 
 A lightweight Python micro-framework for LLM-driven research experiments.
 
-Core Philosophy: **"Like a caveman"** — The user owns the main loop and logic; the library handles only the "dirty work":
-- **Isolated Workspaces**: Automatic snapshotting of project state for each experiment.
-- **Branch Management**: Clean hierarchy for different research directions.
-- **History Bookkeeping**: Automatic `history.json` management across branches.
-- **File Guard**: MD5 hashing to prevent LLMs from accidentally modifying "protected" files (like evaluators).
-- **Thin CLI Glue**: Native adapters for popular LLM CLIs (Claude Code, Gemini CLI, etc.).
+## Core Philosophy
+The framework follows a "Like a caveman" approach: the user retains full control over the main loop and logic, while the library handles the underlying infrastructure:
+- **Isolated Workspaces**: Automatic snapshotting of project state for every experiment.
+- **Branch Management**: Hierarchical organization for different research directions.
+- **History Bookkeeping**: Management of history.json across all branches and experiments.
+- **File Guard**: MD5 hashing to prevent LLMs from modifying protected files like evaluators.
+- **CLI Adapters**: Support for various LLM CLIs (Claude Code, Gemini CLI, Qwen, etc.).
 
-## 🚀 Installation
+## Installation
 
 ```bash
-# Clone the repo and install in editable mode
 pip install -e .
 ```
 
-## 🛠 Core Components
+## Core Components
 
-### 1. `AutoResearch`
-Manages branches and experiment snapshots.
-- `new_branch()`: Starts a new research line from the project baseline.
-- `enter_exp(B, L, S)`: Context manager that creates an isolated folder and switches the CWD to it.
-- `save_history()` / `get_history()`: Simple JSON-based bookkeeping.
+### AutoResearch
+Handles the creation and management of experiment branches.
+- `new_branch()`: Initializes a new research line.
+- `enter_exp(B, L, S)`: Context manager for setting up an isolated experiment folder and managing the working directory.
+- `save_history()` / `get_history()`: Functions for JSON-based metadata tracking.
 
-### 2. `AIAgent`
-A wrapper around LLM CLI tools with YOLO (autonomous) mode support.
-- `execute_safe(prompt, guard)`: Runs the LLM with "pre-run" and "post-run" file guards.
+### AIAgent
+A wrapper for LLM CLI tools designed for autonomous (YOLO) mode.
+- `execute_safe(prompt, guard)`: Executes the LLM call while ensuring protected files remain unchanged via pre-run and post-run hooks.
 
-### 3. `Guard`
-Monitors protected files. If an LLM modifies a protected file (e.g., cheats by changing the evaluation metric), the Guard detects the MD5 mismatch and restores the original file.
+### Guard
+Monitors essential files. It detects modifications to protected files (like changing evaluation metrics) by comparing MD5 hashes and automatically restores them if a change is detected.
 
-## 📂 Folder Structure
+## Directory Structure
 
-Each experiment runs in its own isolated environment:
+Experiments are organized into isolated folders to ensure reproducibility:
 ```text
 agent_workspaces/
 └── Branch1/
@@ -42,20 +44,20 @@ agent_workspaces/
     └── exp1.1.2/ (Next attempt based on 1.1.1)
 ```
 
-## 🧪 Examples
+## Examples
 
-### 1. Basic Loop
-A minimal implementation of an optimization loop.
+### Basic Loop
+A minimal implementation of the optimization cycle.
 ```bash
 python example/basic_loop.py
 ```
 
-### 2. Diabetes Optimization (Recommended)
-A full-featured example optimizing a scikit-learn model.
+### Diabetes Model Optimization
+A complete example that optimizes a scikit-learn model using the diabetes dataset.
 ```bash
 cd example/diabetes_sklearn
 python arif_run.py
 ```
 
-## 📜 License
+## License
 MIT

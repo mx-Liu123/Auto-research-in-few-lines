@@ -5,6 +5,10 @@ from arif import AutoResearch, AIAgent
 
 
 def main():
+    # --- Configuration ---
+    AGENT_TIMEOUT = None # Set in seconds, e.g., 300 for 5 minutes. None for no timeout.
+    CMD_TIMEOUT = 600    # Set in seconds, e.g., 600 for 10 minutes.
+
     main_prompt = (
         "This is a machine learning project. You need to modify strategy.py to reduce Loss (MSE). "
         "Focus on CWD and do not modify external files. "
@@ -35,25 +39,25 @@ def main():
                 + f"Previous lessons:\n{history_text}\nNow you only need to propose an experimental hypothesis, do not modify the code.",
                 guard=ar.guard,
                 new_session=True,
+                timeout=AGENT_TIMEOUT
             )
             print(f"Hypothesis: {hypothesis[:100]}...")
 
             trails = 0
             current_loss = float("inf")
             if_improved = False
-            modifications = []
 
             while trails < 3:
                 trails += 1
                 print(f"  Trail {trails}/3: Modifying strategy.py...")
-                response = agent.execute_safe(
+                _ = agent.execute_safe(
                     main_prompt + "Now start modifying the code, but do not run it.",
                     guard=ar.guard,
+                    timeout=AGENT_TIMEOUT
                 )
-                modifications.append(response)
 
                 print("  Running evaluator.py...")
-                status, stdout, stderr = ar.run_cmd("python evaluator.py strategy.py")
+                status, stdout, stderr = ar.run_cmd("python evaluator.py strategy.py", timeout=CMD_TIMEOUT)
 
                 # evaluator.py prints best metric (MSE) on the last line
                 match = re.search(r"Best metric:\s*([-+]?[0-9]*\.?[0-9]+)", stdout)
@@ -73,6 +77,7 @@ def main():
             summary = agent.execute_safe(
                 main_prompt + "Now you only need to summarize the experiment, do not modify the code.",
                 guard=ar.guard,
+                timeout=AGENT_TIMEOUT
             )
 
             ar.save_history(

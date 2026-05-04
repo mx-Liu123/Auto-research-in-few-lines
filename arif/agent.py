@@ -17,7 +17,7 @@ class AIAgent:
         self.adapter = get_adapter(self.model)
         self.session_id = None
 
-    def execute_safe(self, prompt, guard, new_session=False):
+    def execute_safe(self, prompt, guard, new_session=False, timeout=None):
         if new_session:
             self.session_id = None
 
@@ -60,12 +60,17 @@ class AIAgent:
             proc.stdin.write(stdin_input)
             proc.stdin.close()
 
-        proc.wait()
-        t_out.join()
-        t_err.join()
+        try:
+            proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            print(f"\n[AIAgent ERROR] Execution timed out after {timeout} seconds.")
+            raise RuntimeError(f"LLM Agent Execution Timed Out after {timeout}s")
+        finally:
+            t_out.join()
+            t_err.join()
 
         full_stdout = "".join(stdout_chunks)
-
         # 增加错误检测逻辑
         parsed = self.adapter.parse_output(full_stdout, self.session_id)
 

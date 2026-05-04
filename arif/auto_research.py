@@ -105,7 +105,7 @@ class AutoResearch:
                 history.append(data)
         return history
 
-    def run_cmd(self, cmd):
+    def run_cmd(self, cmd, timeout=None):
         with open("stdout.log", "w") as f_out, open("stderr.log", "w") as f_err:
             proc = subprocess.Popen(
                 cmd,
@@ -115,19 +115,44 @@ class AutoResearch:
                 text=True,
             )
             out_chunks, err_chunks = [], []
-            while True:
-                out = proc.stdout.readline()
-                err = proc.stderr.readline()
-                if out == "" and err == "" and proc.poll() is not None:
-                    break
-                if out:
-                    f_out.write(out)
-                    f_out.flush()
-                    out_chunks.append(out)
-                if err:
-                    f_err.write(err)
-                    f_err.flush()
-                    err_chunks.append(err)
+            import time
+            start_time = time.time()
+            
+            try:
+                while True:
+                    # Check timeout manually if provided
+                    if timeout and (time.time() - start_time) > timeout:
+                        proc.kill()
+                        raise subprocess.TimeoutExpired(cmd, timeout)
+
+                    # We use a small sleep to avoid busy waiting and allow pipes to fill
+                    time.sleep(0.1)
+                    
+                    # Read available output
+                    while True:
+                        import select
+                        # Use select for non-blocking check if possible, or just read line by line
+                        # Simplified for cross-platform compatibility
+                        out = proc.stdout.readline() if select.select([proc.stdout], [], [], 0)[0] else None
+                        err = proc.stderr.readline() if select.select([proc.stderr], [], [], 0)[0] else None
+                        
+                        if out:
+                            f_out.write(out); f_out.flush()
+                            out_chunks.append(out)
+                        if err:
+                            f_err.write(err); f_err.flush()
+                            err_chunks.append(err)
+                        
+                        if not out and not err:
+                            break
+
+                    if proc.poll() is not None:
+                        break
+            except Exception as e:
+                proc.kill()
+                err_msg = f"Command failed or timed out: {str(e)}"
+                f_err.write(err_msg)
+                return 1, "".join(out_chunks), "".join(err_chunks) + "\n" + err_msg
 
         return proc.returncode, "".join(out_chunks), "".join(err_chunks)
 
