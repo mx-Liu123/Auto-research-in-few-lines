@@ -20,7 +20,9 @@ The experiment identifier follows a `Branch.Level.Step` format:
 - **Step (S)**: Trials at the same level (Incremented when results do not improve).
 
 ### 3. File Protection
-Essential scripts (like evaluators) are protected by a `Guard`. If you modify a protected file during an experiment, `arif` will detect the MD5 change and revert the file to ensure the integrity of the experiment.
+Only **evaluator scripts** and their **direct dependencies** (modules they import) should be listed as protected files. This ensures that the evaluation logic remains immutable and untampered. 
+
+**Note**: Scripts used for training, exploration, or model strategy (e.g., `strategy.py`, `train.py`) should **never** be protected, as these are the primary targets for your modifications and research improvements.
 
 ## Recommended Workflow Pattern
 
