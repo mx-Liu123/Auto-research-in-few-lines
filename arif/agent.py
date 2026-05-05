@@ -17,19 +17,26 @@ class AIAgent:
         self.adapter = get_adapter(self.model)
         self.session_id = None
 
-    def execute_safe(self, prompt, guard, new_session=False, timeout=None):
+    def execute_safe(self, prompt, guard, new_session=False, timeout=None, model=None):
         if new_session:
             self.session_id = None
 
+        # Determine target model and adapter
+        target_model = model or self.model
+        current_adapter = self.adapter
+        if model and model != self.model:
+            # If a different model is requested, check if we need a different adapter
+            current_adapter = get_adapter(model)
+
         guard.before()
 
-        cmd = self.adapter.build_command(
+        cmd = current_adapter.build_command(
             prompt=prompt,
             session_id=self.session_id,
-            model=self.model,
+            model=target_model,
             yolo=True,
         )
-        kwargs = self.adapter.get_run_kwargs(prompt, os.environ.copy())
+        kwargs = current_adapter.get_run_kwargs(prompt, os.environ.copy())
 
         # Use Popen to stream output in real-time
         kwargs.pop("capture_output", None) # Popen doesn't use capture_output
@@ -38,7 +45,7 @@ class AIAgent:
         # If input was in kwargs, we need to pass it to communicate
         stdin_input = kwargs.pop("input", None)
 
-        print(f"[AIAgent] Executing {self.engine}...")
+        print(f"[AIAgent] Executing {target_model}...")
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE if stdin_input else None, **kwargs)
 
         stdout_chunks = []
@@ -72,8 +79,7 @@ class AIAgent:
 
         full_stdout = "".join(stdout_chunks)
         # 增加错误检测逻辑
-        parsed = self.adapter.parse_output(full_stdout, self.session_id)
-
+        parsed = current_adapter.parse_output(full_stdout, self.session_id)
         # 兼容旧版本 adapter 返回 (text, session_id) 或新版本返回 dict 的情况
         if isinstance(parsed, dict):
             response_text = parsed.get("text", "")
