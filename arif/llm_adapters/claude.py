@@ -17,8 +17,7 @@ class ClaudeAdapter(BaseAdapter):
             cmd.extend(["--tools", str(tools) if tools is not None else ""])
 
         if session_id and session_id != "AUTO_RESUME":
-    ...
-
+             cmd.extend(["-r", session_id])
              
         # If the user passed a specific model (not just "claude"), pass it via --model
         if model and model not in ["claude", "claude-cli"]:
