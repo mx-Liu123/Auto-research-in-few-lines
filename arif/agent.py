@@ -17,7 +17,7 @@ class AIAgent:
         self.adapter = get_adapter(self.model)
         self.session_id = None
 
-    def execute_safe(self, prompt, guard, new_session=False, timeout=None, model=None):
+    def execute_safe(self, prompt, guard, new_session=False, timeout=None, model=None, **kwargs):
         if new_session:
             self.session_id = None
 
@@ -35,18 +35,19 @@ class AIAgent:
             session_id=self.session_id,
             model=target_model,
             yolo=True,
+            **kwargs
         )
-        kwargs = current_adapter.get_run_kwargs(prompt, os.environ.copy())
+        run_kwargs = current_adapter.get_run_kwargs(prompt, os.environ.copy())
 
         # Use Popen to stream output in real-time
-        kwargs.pop("capture_output", None) # Popen doesn't use capture_output
-        kwargs["stdout"] = subprocess.PIPE
-        kwargs["stderr"] = subprocess.PIPE
+        run_kwargs.pop("capture_output", None) # Popen doesn't use capture_output
+        run_kwargs["stdout"] = subprocess.PIPE
+        run_kwargs["stderr"] = subprocess.PIPE
         # If input was in kwargs, we need to pass it to communicate
-        stdin_input = kwargs.pop("input", None)
+        stdin_input = run_kwargs.pop("input", None)
 
         print(f"[AIAgent] Executing {target_model}...")
-        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE if stdin_input else None, **kwargs)
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE if stdin_input else None, **run_kwargs)
 
         stdout_chunks = []
         stderr_chunks = []

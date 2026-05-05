@@ -2,7 +2,7 @@ import json
 from .base import BaseAdapter
 
 class QwenAdapter(BaseAdapter):
-    def build_command(self, prompt, session_id, model, yolo):
+    def build_command(self, prompt, session_id, model, yolo, **kwargs):
         cmd = ["qwen", "-o", "stream-json"]
         
         # Strip 'qwen:' prefix if present

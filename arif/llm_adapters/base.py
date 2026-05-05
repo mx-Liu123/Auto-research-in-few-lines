@@ -3,7 +3,7 @@ import os
 
 class BaseAdapter(abc.ABC):
     @abc.abstractmethod
-    def build_command(self, prompt, session_id, model, yolo):
+    def build_command(self, prompt, session_id, model, yolo, **kwargs):
         """Builds the CLI command list. Returns list of strings."""
         pass
 

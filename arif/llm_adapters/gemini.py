@@ -2,7 +2,7 @@ import json
 from .base import BaseAdapter
 
 class GeminiAdapter(BaseAdapter):
-    def build_command(self, prompt, session_id, model, yolo):
+    def build_command(self, prompt, session_id, model, yolo, **kwargs):
         cmd = ["gemini", "-o", "stream-json"]
         
         # Original logic: if cli_model and cli_model != binary ...

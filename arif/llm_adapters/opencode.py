@@ -1,7 +1,7 @@
 from .base import BaseAdapter
 
 class OpenCodeAdapter(BaseAdapter):
-    def build_command(self, prompt, session_id, model, yolo):
+    def build_command(self, prompt, session_id, model, yolo, **kwargs):
         cmd = ["opencode", "run"]
         
         if model:

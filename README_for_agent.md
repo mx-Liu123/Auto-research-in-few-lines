@@ -50,9 +50,15 @@ agent = AIAgent(engine="claude")
 for i in range(MAX_EXP):
     with ar.enter_exp(B, L, S):
         # 1. Propose hypothesis based on ar.get_history()
+        # Optional: Use tools="" to disable tool calls for reasoning-only tasks
+        hypothesis = agent.execute_safe(prompt, guard=ar.guard, tools="")
+        
         # 2. Modify code via agent.execute_safe()
+        _ = agent.execute_safe("Now modify strategy.py...", guard=ar.guard)
+        
         # 3. Evaluate
         status, stdout, stderr = ar.run_cmd("python evaluator.py")
+        
         # 4. Save history
         ar.save_history(metric=result, if_improved=is_better)
         

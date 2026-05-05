@@ -2,15 +2,23 @@ import json
 from .base import BaseAdapter
 
 class ClaudeAdapter(BaseAdapter):
-    def build_command(self, prompt, session_id, model, yolo):
+    def build_command(self, prompt, session_id, model, yolo, **kwargs):
         # Claude CLI construction
         # Use --output-format json for structured results
         cmd = ["claude", "-p", "--output-format", "json"]
-        
+
         cmd.append("--dangerously-skip-permissions")
-        
+
+        # Optional: tool control
+        # Only add if explicitly passed in kwargs
+        if "tools" in kwargs:
+            tools = kwargs["tools"]
+            # Allow passing None or empty string to disable tools
+            cmd.extend(["--tools", str(tools) if tools is not None else ""])
+
         if session_id and session_id != "AUTO_RESUME":
-             cmd.extend(["-r", session_id])
+    ...
+
              
         # If the user passed a specific model (not just "claude"), pass it via --model
         if model and model not in ["claude", "claude-cli"]:
