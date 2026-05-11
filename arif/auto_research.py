@@ -79,18 +79,32 @@ class AutoResearch:
         if not os.path.isdir(self.workspace_root):
             return history
 
-        for b_dir in sorted(os.listdir(self.workspace_root)):
-            if not b_dir.startswith("Branch"):
-                continue
+        # Get and sort branches numerically
+        b_dirs = []
+        for d in os.listdir(self.workspace_root):
+            if d.startswith("Branch"):
+                try:
+                    b_num = int(d.replace("Branch", ""))
+                    b_dirs.append((b_num, d))
+                except ValueError:
+                    pass
+        b_dirs.sort()
+
+        for _, b_dir in b_dirs:
             b_path = os.path.join(self.workspace_root, b_dir)
 
-            for e_dir in sorted(os.listdir(b_path)):
+            # Get and sort experiments numerically
+            e_dirs = []
+            for d in os.listdir(b_path):
+                B, L, S = self._parse_exp_dirname(d)
+                if B is not None:
+                    e_dirs.append(((B, L, S), d))
+            e_dirs.sort()
+
+            for (B, L, S), e_dir in e_dirs:
                 exp_path = os.path.join(b_path, e_dir)
                 h_path = os.path.join(exp_path, "history.json")
                 if not os.path.isfile(h_path):
-                    continue
-                B, L, S = self._parse_exp_dirname(e_dir)
-                if B is None:
                     continue
                 try:
                     with open(h_path, "r") as f:
@@ -98,10 +112,11 @@ class AutoResearch:
                 except Exception:
                     continue
 
-                data.setdefault("B", B)
-                data.setdefault("L", L)
-                data.setdefault("S", S)
-                data.setdefault("exp_id", e_dir)
+                # FORCE trust folder name metadata over JSON content
+                data["B"] = B
+                data["L"] = L
+                data["S"] = S
+                data["exp_id"] = e_dir
                 history.append(data)
         return history
 
@@ -148,9 +163,14 @@ class AutoResearch:
 
                     if proc.poll() is not None:
                         break
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                err_msg = f"TIMEOUT_ERROR: Command timed out after {timeout}s"
+                f_err.write(err_msg)
+                return 124, "".join(out_chunks), "".join(err_chunks) + "\n" + err_msg
             except Exception as e:
                 proc.kill()
-                err_msg = f"Command failed or timed out: {str(e)}"
+                err_msg = f"Command failed: {str(e)}"
                 f_err.write(err_msg)
                 return 1, "".join(out_chunks), "".join(err_chunks) + "\n" + err_msg
 
@@ -215,6 +235,9 @@ class AutoResearch:
                 try:
                     with open(h_path, "r") as f:
                         h = json.load(f)
+                    # VALIDATION: Ensure JSON content matches directory name (detect zombie)
+                    if h.get("exp_id") != d:
+                        continue
                 except Exception:
                     continue
                 if h.get("if_improved") is True:
@@ -247,6 +270,9 @@ class AutoResearch:
             try:
                 with open(h_path, "r") as f:
                     h = json.load(f)
+                # VALIDATION: Ensure JSON content matches directory name (detect zombie)
+                if h.get("exp_id") != d:
+                    continue
             except Exception:
                 continue
             if_improved = h.get("if_improved")

@@ -74,3 +74,4 @@ for i in range(MAX_EXP):
 - **CWD Awareness**: Always operate on files in the current working directory.
 - **History Retrieval**: Use `ar.get_history()` to learn from previous failures across all levels.
 - **Timeout Management**: Pass `timeout` parameters to `execute_safe` and `run_cmd` to prevent hanging during long-running tasks.
+- **Environment Verification**: Before starting a long research loop, proactively suggest that the user runs the evaluator or a sample task (e.g., via PBS) manually. This confirms that the environment (GPUs, Singularity, dependencies) is correctly configured and the code is runnable, preventing wasted attempts on a broken setup.
