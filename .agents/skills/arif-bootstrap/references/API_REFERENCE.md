@@ -1,9 +1,10 @@
 ## AutoResearch
 Main class for managing experiment branches and isolation.
-- `__init__(project_root="./", protected_files=None, log_path=None)`
+- `__init__(project_root: str = "./", protected_files: list[str] | None = None, log_path: str | None = None)`:
+    - If `log_path` is a relative filename, it enables **distributed logging**. Now cross-platform (Windows supported). To prevent infinite growth through inheritance, the log is **automatically reset (overwritten)** upon entering each new experiment.
 - `new_branch()`: Creates a baseline and returns (B, 1, 1).
 - `enter_exp(B, L, S)`: Context manager. Switches to isolated folder. Logs entry to terminal and `log_path`.
-- `modify_and_run_loop(agent, modify_prompt, eval_cmd, metric_name, max_trials=3, best_metric=inf, timeout=None)`: 
+- `modify_and_run_loop(agent, modify_prompt, eval_cmd, metric_extract, max_trials=3, best_metric=inf, timeout=None)`: 
     - High-level trial-and-error loop. 
     - Automatically extracts metrics (e.g., `Loss: 0.123`).
     - Provides failure feedback (stdout/stderr) to the agent on retries.
@@ -26,14 +27,15 @@ Wrapper for LLM CLI interactions.
 ## Guard
 MD5-based file protection.
 - `__init__(arif_instance)`: Monitors `protected_files` from the `AutoResearch` instance.
-
 ## Standard Code Example (arif_run.py)
 ```python
 from arif import AutoResearch, AIAgent
 
-ar = AutoResearch(project_root="./", protected_files=["eval.py"], log_path="arif.log")
+ar = AutoResearch(project_root="./", protected_files=["eval.py"], log_path="arif_LLM_response.log")
 # Setup Agent with global defaults
-agent = AIAgent(
+...
+```
+
     engine="claude", 
     system_prompt="Optimize strategy.py.", 
     default_guard=ar.guard
@@ -56,7 +58,7 @@ for _ in range(20):
             agent, 
             modify_prompt="Implement hypothesis.", 
             eval_cmd="python eval.py",
-            metric_name="Score: ", 
+            metric_extract="Score: ", 
             best_metric=best_score
         )
         

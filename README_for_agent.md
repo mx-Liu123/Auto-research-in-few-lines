@@ -37,8 +37,10 @@ Only **evaluator scripts** and their **direct dependencies** (modules they impor
 from arif import AutoResearch, AIAgent
 
 # Initialize environment with global defaults
-ar = AutoResearch(project_root="./", protected_files=["evaluator.py"], log_path="arif.log")
-agent = AIAgent(
+ar: AutoResearch = AutoResearch(project_root="./", protected_files=["evaluator.py"], log_path="arif_LLM_response.log")
+# Distributed logging: If log_path is relative, a fresh log is created inside each experiment 
+# folder (overwritten upon entry to prevent infinite growth).
+agent: AIAgent = AIAgent(
     engine="claude", 
     system_prompt="Optimize train.py to reduce loss.",
     default_guard=ar.guard
@@ -58,7 +60,7 @@ for i in range(MAX_EXP):
             agent, 
             modify_prompt="Implement hypothesis.", 
             eval_cmd="python evaluator.py",
-            metric_name="Loss: "
+            metric_extract="Loss: "
         )
         
         # 3. Summarize and Save

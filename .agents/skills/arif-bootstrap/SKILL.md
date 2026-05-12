@@ -47,6 +47,7 @@ Before declaring the project "Ready-to-Run", perform a final safety check:
 1. **Isolation Test**: Simulate a single `enter_exp` call. Verify that a snapshot folder is created in `agent_workspaces/`.
 2. **Guard Test**: Attempt a dummy modification to a protected file (e.g., the Evaluator) inside the context manager. Verify that `arif.Guard` detects or prevents the change.
 3. **Write Test**: Verify the Agent can successfully modify the Target File within the snapshot.
+4. **Log Isolation Test**: If `log_path` is used, verify that entering a new experiment overwrites the local log file, ensuring it doesn't inherit historical data from previous trials.
 
 ## Final Handover
 Once all tests pass, provide the user with:

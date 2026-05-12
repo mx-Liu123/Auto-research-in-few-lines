@@ -12,7 +12,7 @@ from .guard import Guard
 
 
 class AutoResearch:
-    def __init__(self, project_root="./", protected_files=None, log_path=None):
+    def __init__(self, project_root: str = "./", protected_files: list[str] | None = None, log_path: str | None = None):
         self.project_root = os.path.abspath(project_root)
         self.protected_files = protected_files or []
         self.workspace_root = os.path.join(self.project_root, "agent_workspaces")
@@ -23,12 +23,12 @@ class AutoResearch:
         os.makedirs(self.workspace_root, exist_ok=True)
         self.guard = Guard(self)
 
-    def _log(self, message):
+    def _log(self, message, mode="a"):
         if self.log_path:
-            with open(self.log_path, "a", encoding="utf-8") as f:
+            with open(self.log_path, mode, encoding="utf-8") as f:
                 f.write(message + "\n")
 
-    def new_branch(self):
+    def new_branch(self) -> tuple[int, int, int]:
         """Create Branch{B} and baseline exp{B}.0.0, return (B, 1, 1)."""
         B = max(self._get_existing_branches(), default=0) + 1
         branch_dir = os.path.join(self.workspace_root, f"Branch{B}")
@@ -60,14 +60,13 @@ class AutoResearch:
         return B, last_L, last_S + 1
 
     @contextlib.contextmanager
-    def enter_exp(self, B, L, S):
+    def enter_exp(self, B: int, L: int, S: int):
         branch_dir = os.path.join(self.workspace_root, f"Branch{B}")
         exp_id = f"exp{B}.{L}.{S}"
         exp_dir = os.path.join(branch_dir, exp_id)
 
         msg = f"\n>>> Entering Experiment: {exp_id}"
         print(msg)
-        self._log(msg)
         
         base_dir = self._find_best_base(B)
         if not os.path.exists(exp_dir):
@@ -75,6 +74,7 @@ class AutoResearch:
 
         old_cwd = os.getcwd()
         os.chdir(exp_dir)
+        self._log(msg, mode="w") # Truncate inherited logs and start fresh
         self.current_exp_dir = exp_dir
         self.current_metadata = {"B": B, "L": L, "S": S, "exp_id": exp_id}
         try:
@@ -84,7 +84,7 @@ class AutoResearch:
             self.current_exp_dir = None
             self.current_metadata = {}
 
-    def get_history(self, B=None, L=None, S=None, if_improved=None, limit=None, as_text=False):
+    def get_history(self, B: int | list | None = None, L: int | list | None = None, S: int | list | None = None, if_improved: bool | None = None, limit: int | None = None, as_text: bool = False):
         """
         Get experiment history with optional filtering.
         Filters are applied as an intersection (AND).
@@ -171,13 +171,13 @@ class AutoResearch:
     def modify_and_run_loop(
         self,
         agent,
-        modify_prompt,
-        eval_cmd,
-        metric_name="Loss",
-        max_trials=3,
-        best_metric=float("inf"),
-        timeout=None,
-    ):
+        modify_prompt: str,
+        eval_cmd: str,
+        metric_extract: str = "Loss",
+        max_trials: int = 3,
+        best_metric: float = float("inf"),
+        timeout: int | None = None,
+    ) -> tuple[bool, float, str, str]:
         """
         Encapsulate the Modify -> Run -> Compare loop.
         Provides detailed feedback (stdout/stderr) to the agent on failure/retry.
@@ -210,15 +210,15 @@ class AutoResearch:
             status, stdout, stderr = self.run_cmd(eval_cmd, timeout=timeout)
             
             # Extract metric (handling optional sign and decimals)
-            # No assumptions: user must provide the exact prefix (including colons/spaces) in metric_name
-            pattern = rf"{metric_name}([-+]?[0-9]*\.?[0-9]+)"
+            # No assumptions: user must provide the exact prefix (including colons/spaces) in metric_extract
+            pattern = rf"{metric_extract}([-+]?[0-9]*\.?[0-9]+)"
             match = re.search(pattern, stdout, re.IGNORECASE)
             current_metric = float(match.group(1)) if match else float("inf")
             
             trials_history.append({"stdout": stdout, "stderr": stderr, "metric": current_metric})
             final_stdout, final_stderr = stdout, stderr
 
-            print(f"  Current {metric_name}: {current_metric:.4f} (Best: {best_metric:.4f})")
+            print(f"  Current {metric_extract}: {current_metric:.4f} (Best: {best_metric:.4f})")
 
             if_improved = current_metric < best_metric
             if if_improved:
@@ -254,12 +254,11 @@ class AutoResearch:
                     
                     # Read available output
                     while True:
-                        import select
-                        # Use select for non-blocking check if possible, or just read line by line
-                        # Simplified for cross-platform compatibility
-                        out = proc.stdout.readline() if select.select([proc.stdout], [], [], 0)[0] else None
-                        err = proc.stderr.readline() if select.select([proc.stderr], [], [], 0)[0] else None
-                        
+                        import select, sys
+                        # Use select for non-blocking check on Unix, skip on Windows to avoid crash
+                        ready = select.select([proc.stdout, proc.stderr], [], [], 0)[0] if sys.platform != 'win32' else []
+                        out = proc.stdout.readline() if proc.stdout in ready else None
+                        err = proc.stderr.readline() if proc.stderr in ready else None                        
                         if out:
                             f_out.write(out); f_out.flush()
                             out_chunks.append(out)

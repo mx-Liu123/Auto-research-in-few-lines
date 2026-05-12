@@ -22,13 +22,13 @@ pip install -e .
 
 ### AIAgent
 A wrapper for LLM CLI tools with persistent context.
-- `__init__(engine, system_prompt, default_guard, default_timeout, log_path)`: Set global defaults for all calls.
+- `__init__(engine: str, system_prompt: str, default_guard: any, default_timeout: int | None, log_path: str | None)`: Set global defaults for all calls.
 - `ask(prompt, ...)`: Executes an LLM call. Supports local overrides for guard and timeout. Detailed responses are directed to `log_path`.
 
 ### AutoResearch
 Handles experiment lifecycle and data management.
-- `__init__(..., log_path)`: Initialize with a centralized log file for all experiments.
-- `modify_and_run_loop(agent, modify_prompt, eval_cmd, metric_name, ...)`: A high-level abstraction for the "Modify -> Run -> Extract Metric" cycle with automatic retry feedback.
+- `__init__(project_root: str, protected_files: list[str] | None, log_path: str | None)`: Initialize with a log filename. Now supports Windows via platform-safe `run_cmd`.
+- `modify_and_run_loop(agent, modify_prompt, eval_cmd, metric_extract, ...)`: A high-level abstraction for the "Modify -> Run -> Extract Metric" cycle with automatic retry feedback.
 - `get_history(..., as_text=True)`: Retrieves past experiments, optionally formatted as a single string for direct LLM context injection.
 - `enter_exp(B, L, S)`: Context manager for setting up an isolated experiment folder. Automatically logs entry info to terminal and log file.
 

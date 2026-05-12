@@ -22,12 +22,11 @@ wheels/
 *.egg
 
 # Arif specific
-agent_workspaces/
-example/diabetes_sklearn/agent_workspaces/
-history.json
+**/agent_workspaces/
+**/history.json
+*.log
+test_project/
 search_results.csv
-stdout.log
-stderr.log
 debug_output.txt
 
 # Environments

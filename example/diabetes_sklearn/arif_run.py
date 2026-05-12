@@ -11,21 +11,23 @@ def main():
 
     # Lock project_root to the script's directory for consistency
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    ar = AutoResearch(project_root=script_dir, protected_files=["evaluator.py"], log_path="arif.log")
+    log_name = "arif_LLM_response.log"
+    ar = AutoResearch(project_root=script_dir, protected_files=["evaluator.py"], log_path=log_name)
     
     # 1. Initialize Agent with global defaults
     agent = AIAgent(
         engine="gemini", 
         system_prompt=main_prompt, 
         default_guard=ar.guard, 
-        default_timeout=AGENT_TIMEOUT
+        default_timeout=AGENT_TIMEOUT,
+        log_path=log_name
     )
 
     B, L, S = ar.new_branch()
     best_loss = float("inf")
 
-    # Temporarily set to 2 loops for validation
-    for _ in range(2):
+    # Temporarily set to 3 loops for validation
+    for _ in range(3):
         with ar.enter_exp(B, L, S):
             # 2. Simplified History Context (Directly as text)
             history_text = ar.get_history(L=L, if_improved=False, limit=3, as_text=True)
@@ -38,7 +40,7 @@ def main():
                 agent, 
                 modify_prompt="Modify strategy.py.", 
                 eval_cmd="python evaluator.py strategy.py",
-                metric_name="Best metric: ", 
+                metric_extract="Best metric: ", 
                 best_metric=best_loss, 
                 max_trials=3,
                 timeout=CMD_TIMEOUT

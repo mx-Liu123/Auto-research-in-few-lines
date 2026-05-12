@@ -12,7 +12,7 @@ from .llm_adapters import get_adapter
 class AIAgent:
     """Wrapper for LLM CLI tools with session + guard hooks."""
 
-    def __init__(self, engine="claude", model=None, delay=0, system_prompt="", default_guard=None, default_timeout=None, log_path=None):
+    def __init__(self, engine: str = "claude", model: str | None = None, delay: int = 0, system_prompt: str = "", default_guard: any = None, default_timeout: int | None = None, log_path: str | None = None):
         self.engine = engine
         self.model = model or engine
         self.delay = delay
@@ -28,7 +28,7 @@ class AIAgent:
             with open(self.log_path, "a", encoding="utf-8") as f:
                 f.write(message + "\n")
 
-    def ask(self, prompt, guard=IndexError, timeout=IndexError, new_session=False, model=None, **kwargs):
+    def ask(self, prompt: str, guard: any = IndexError, timeout: int | None = IndexError, new_session: bool = False, model: str | None = None, **kwargs) -> str:
         """
         Execute an LLM command. 
         - guard: If IndexError (default), use default_guard. If None, skip guard.
