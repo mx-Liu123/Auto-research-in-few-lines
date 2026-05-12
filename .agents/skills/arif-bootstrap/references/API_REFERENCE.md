@@ -1,40 +1,72 @@
-# arif API Reference
-
 ## AutoResearch
 Main class for managing experiment branches and isolation.
-- `__init__(project_root, protected_files)`
-- `new_branch()`: Returns (B, L, S).
-- `enter_exp(B, L, S)`: Context manager. Switches to isolated folder.
-- `run_cmd(cmd, timeout)`: Runs shell command in the current context.
-- `save_history(metric, if_improved)`: Logs metadata.
-- `get_history()`: Returns list of past experiments.
+- `__init__(project_root="./", protected_files=None, log_path=None)`
+- `new_branch()`: Creates a baseline and returns (B, 1, 1).
+- `enter_exp(B, L, S)`: Context manager. Switches to isolated folder. Logs entry to terminal and `log_path`.
+- `modify_and_run_loop(agent, modify_prompt, eval_cmd, metric_name, max_trials=3, best_metric=inf, timeout=None)`: 
+    - High-level trial-and-error loop. 
+    - Automatically extracts metrics (e.g., `Loss: 0.123`).
+    - Provides failure feedback (stdout/stderr) to the agent on retries.
+- `get_history(B=None, L=None, S=None, if_improved=None, limit=None, as_text=False)`:
+    - Filters history. Supports ranges for B, L, S (e.g., `S=[S-5, S]`).
+    - `as_text=True`: Returns a formatted string for LLM context injection.
+- `save_history(**kwargs)`: Logs metadata to `history.json`.
 
 ## AIAgent
 Wrapper for LLM CLI interactions.
-- `__init__(engine)`: Engines: "claude", "gemini", "qwen", "opencode".
-- `execute_safe(prompt, guard, tools)`: Runs LLM call with MD5 protection.
+- `__init__(engine, model=None, system_prompt="", default_guard=None, default_timeout=None, log_path=None)`:
+    - `system_prompt`: Prepended to all calls.
+    - `default_guard`: Global security barrier.
+    - `default_timeout`: Global execution limit.
+    - `log_path`: Optional file to store full LLM execution trace.
+- `ask(prompt, guard=IndexError, timeout=IndexError, new_session=False, model=None, **kwargs)`: 
+    - Executes LLM call. 
+    - Detailed output is sent to `log_path` (terminal remains concise).
 
 ## Guard
 MD5-based file protection.
-- `__init__(protected_files)`: List of files to monitor.
+- `__init__(arif_instance)`: Monitors `protected_files` from the `AutoResearch` instance.
 
 ## Standard Code Example (arif_run.py)
 ```python
 from arif import AutoResearch, AIAgent
 
-ar = AutoResearch(project_root="./", protected_files=["eval.py"])
-B, L, S = ar.new_branch()
-agent = AIAgent(engine="claude")
+ar = AutoResearch(project_root="./", protected_files=["eval.py"], log_path="arif.log")
+# Setup Agent with global defaults
+agent = AIAgent(
+    engine="claude", 
+    system_prompt="Optimize strategy.py.", 
+    default_guard=ar.guard
+)
 
-for _ in range(MAX):
+B, L, S = ar.new_branch()
+best_score = float("inf")
+
+for _ in range(20):
     with ar.enter_exp(B, L, S):
-        # 1. Reason
-        hypo = agent.execute_safe("propose change", guard=ar.guard, tools="")
-        # 2. Act
-        agent.execute_safe("modify strategy.py", guard=ar.guard)
-        # 3. Eval
-        s, out, err = ar.run_cmd("python eval.py")
-        # 4. Save
-        ar.save_history(metric=parse(out), if_improved=is_better)
-        # 5. Update B,L,S logic...
+...
+```
+
+        # 1. Reason with history context
+        history = ar.get_history(L=L, if_improved=False, limit=3, as_text=True)
+        hypo = agent.ask(f"Lessons:\n{history}\nPropose hypothesis.", new_session=True)
+        
+        # 2. Modify and Eval Loop
+        improved, score, _, _ = ar.modify_and_run_loop(
+            agent, 
+            modify_prompt="Implement hypothesis.", 
+            eval_cmd="python eval.py",
+            metric_name="Score: ", 
+            best_metric=best_score
+        )
+        
+        # 3. Save
+        summary = agent.ask("Summarize result.")
+        ar.save_history(metric=score, if_improved=improved, hypothesis=hypo, summary=summary)
+        
+        # 4. Evolve
+        if improved:
+            best_score, L, S = score, L + 1, 1
+        else:
+            S += 1
 ```

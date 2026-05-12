@@ -12,15 +12,21 @@ from .guard import Guard
 
 
 class AutoResearch:
-    def __init__(self, project_root="./", protected_files=None):
+    def __init__(self, project_root="./", protected_files=None, log_path=None):
         self.project_root = os.path.abspath(project_root)
         self.protected_files = protected_files or []
         self.workspace_root = os.path.join(self.project_root, "agent_workspaces")
+        self.log_path = log_path
         self.current_exp_dir = None
         self.current_metadata = {}
 
         os.makedirs(self.workspace_root, exist_ok=True)
         self.guard = Guard(self)
+
+    def _log(self, message):
+        if self.log_path:
+            with open(self.log_path, "a", encoding="utf-8") as f:
+                f.write(message + "\n")
 
     def new_branch(self):
         """Create Branch{B} and baseline exp{B}.0.0, return (B, 1, 1)."""
@@ -59,7 +65,9 @@ class AutoResearch:
         exp_id = f"exp{B}.{L}.{S}"
         exp_dir = os.path.join(branch_dir, exp_id)
 
-        print(f"\n>>> Entering Experiment: {exp_id}")
+        msg = f"\n>>> Entering Experiment: {exp_id}"
+        print(msg)
+        self._log(msg)
         
         base_dir = self._find_best_base(B)
         if not os.path.exists(exp_dir):
@@ -79,7 +87,9 @@ class AutoResearch:
     def get_history(self, B=None, L=None, S=None, if_improved=None, limit=None, as_text=False):
         """
         Get experiment history with optional filtering.
-        ... (rest of docstring) ...
+        Filters are applied as an intersection (AND).
+        Supports range selection for B, L, S (e.g., S=[S-5, S] means S-5 < val < S).
+        If limit is provided, returns the most recent 'limit' entries.
         If as_text is True, returns a formatted string of hypothesis/summary/metrics.
         """
         def _check(val, filter_val):
@@ -94,8 +104,6 @@ class AutoResearch:
         history = []
         if not os.path.isdir(self.workspace_root):
             return "" if as_text else history
-
-        # ... (rest of filtering logic) ...
 
         # Get and sort branches numerically
         b_dirs = []
@@ -169,13 +177,16 @@ class AutoResearch:
         max_trials=3,
         best_metric=float("inf"),
         timeout=None,
-        max_print_chars=IndexError,
     ):
         """
         Encapsulate the Modify -> Run -> Compare loop.
         Provides detailed feedback (stdout/stderr) to the agent on failure/retry.
         """
         import re
+
+        # Sync log_path to agent if available
+        if self.log_path and not getattr(agent, "log_path", None):
+            agent.log_path = self.log_path
 
         trials_history = []
         current_metric = float("inf")
@@ -192,8 +203,8 @@ class AutoResearch:
                 prompt += feedback
 
             print(f"  Trial {trial}/{max_trials}: Modifying code...")
-            # agent.ask will use its default_guard, default_timeout, and default_max_print_chars if not provided
-            agent.ask(prompt, max_print_chars=max_print_chars)
+            # agent.ask will use its defaults
+            agent.ask(prompt)
 
             print(f"  Trial {trial}/{max_trials}: Running evaluation...")
             status, stdout, stderr = self.run_cmd(eval_cmd, timeout=timeout)
@@ -264,11 +275,15 @@ class AutoResearch:
             except subprocess.TimeoutExpired:
                 proc.kill()
                 err_msg = f"TIMEOUT_ERROR: Command timed out after {timeout}s"
+                print(f"[AutoResearch WARNING] {err_msg}")
+                self._log(f"[AutoResearch WARNING] {err_msg}")
                 f_err.write(err_msg)
                 return 124, "".join(out_chunks), "".join(err_chunks) + "\n" + err_msg
             except Exception as e:
                 proc.kill()
                 err_msg = f"Command failed: {str(e)}"
+                print(f"[AutoResearch ERROR] {err_msg}")
+                self._log(f"[AutoResearch ERROR] {err_msg}")
                 f_err.write(err_msg)
                 return 1, "".join(out_chunks), "".join(err_chunks) + "\n" + err_msg
 

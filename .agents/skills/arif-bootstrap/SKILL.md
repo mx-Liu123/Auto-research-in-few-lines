@@ -34,10 +34,11 @@ Once the configuration is confirmed:
 Generate the `arif_run.py` script. 
 1. **Requirements**: 
    - Use `AutoResearch` and `AIAgent`.
-   - Implement the `B.L.S` (Branch.Level.Step) logic.
+   - Setup `AIAgent` with `system_prompt`, `default_guard`, and `default_timeout`.
+   - Use `ar.get_history(as_text=True)` to fetch failure context for the reasoning phase.
+   - Use `ar.modify_and_run_loop` to handle the trial-and-error optimization cycle.
    - Explicitly list the Evaluator and its dependencies in `protected_files`.
-   - Ensure the Target File is **NOT** in `protected_files`.
-2. **Drafting**: Show the code to the user and explain how the `Researcher Agent` will modify the Target File inside `enter_exp`.
+2. **Drafting**: Show the code to the user and explain how the `modify_and_run_loop` abstracts the heavy lifting (metric extraction and retry feedback).
 
 **STOP**: Ask for approval of the `arif_run.py` design.
 

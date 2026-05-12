@@ -5,16 +5,14 @@ def main():
     AGENT_TIMEOUT, CMD_TIMEOUT = None, 600
     main_prompt = "This is a machine learning project. Modify train.py to reduce loss. Focus on CWD  and do not read or modify external files. Do not run the code ALWAYS, I will run for you."
     
-    # 1. Initialize with Defaults
-    ar = AutoResearch(project_root="./", protected_files=["evaluator.py", "evaluator_lib/"])
+    # 1. Initialize with Defaults and optional log_path
+    ar = AutoResearch(project_root="./", protected_files=["evaluator.py", "evaluator_lib/"], log_path="arif.log")
     agent = AIAgent(
         engine="claude", 
         system_prompt=main_prompt, 
         default_guard=ar.guard, 
-        default_timeout=AGENT_TIMEOUT,
-        default_max_print_chars=200
+        default_timeout=AGENT_TIMEOUT
     )
-
     B, L, S = ar.new_branch()
     best_loss = float("inf")
 

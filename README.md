@@ -5,12 +5,12 @@ This repository enables users to build customized automated research loops with 
 A lightweight Python micro-framework for LLM-driven research experiments.
 
 ## Core Philosophy
-The framework follows a "Like a caveman" approach: the user retains full control over the main loop and logic, while the library handles the underlying infrastructure:
+The framework follows a "Minimalist & Ergonomic" approach: the library handles the underlying infrastructure and common patterns, while the user defines the high-level logic:
 - **Isolated Workspaces**: Automatic snapshotting of project state for every experiment.
-- **Branch Management**: Hierarchical organization for different research directions.
-- **History Bookkeeping**: Management of history.json across all branches and experiments.
-- **File Guard**: MD5 hashing to prevent LLMs from modifying protected files like evaluators.
-- **CLI Adapters**: Support for various LLM CLIs (Claude Code, Gemini CLI, Qwen, etc.).
+- **Branch Management**: Hierarchical organization (B.L.S) for research directions.
+- **Ergonomic LLM Interface**: Global system prompts, security guards, and timeouts.
+- **Automated Trials**: Built-in loops for modification, evaluation, and feedback.
+- **History Bookkeeping**: Pre-formatted context injection for LLM lessons.
 
 ## Installation
 
@@ -20,18 +20,20 @@ pip install -e .
 
 ## Core Components
 
-### AutoResearch
-Handles the creation and management of experiment branches.
-- `new_branch()`: Initializes a new research line.
-- `enter_exp(B, L, S)`: Context manager for setting up an isolated experiment folder and managing the working directory.
-- `save_history()` / `get_history()`: Functions for JSON-based metadata tracking.
-
 ### AIAgent
-A wrapper for LLM CLI tools designed for autonomous (YOLO) mode.
-- `execute_safe(prompt, guard)`: Executes the LLM call while ensuring protected files remain unchanged via pre-run and post-run hooks.
+A wrapper for LLM CLI tools with persistent context.
+- `__init__(engine, system_prompt, default_guard, default_timeout, log_path)`: Set global defaults for all calls.
+- `ask(prompt, ...)`: Executes an LLM call. Supports local overrides for guard and timeout. Detailed responses are directed to `log_path`.
+
+### AutoResearch
+Handles experiment lifecycle and data management.
+- `__init__(..., log_path)`: Initialize with a centralized log file for all experiments.
+- `modify_and_run_loop(agent, modify_prompt, eval_cmd, metric_name, ...)`: A high-level abstraction for the "Modify -> Run -> Extract Metric" cycle with automatic retry feedback.
+- `get_history(..., as_text=True)`: Retrieves past experiments, optionally formatted as a single string for direct LLM context injection.
+- `enter_exp(B, L, S)`: Context manager for setting up an isolated experiment folder. Automatically logs entry info to terminal and log file.
 
 ### Guard
-Monitors essential files. It detects modifications to protected files (like changing evaluation metrics) by comparing MD5 hashes and automatically restores them if a change is detected.
+Monitors essential files via MD5 hashing to prevent unauthorized modifications to evaluators or datasets.
 
 ## Directory Structure
 
