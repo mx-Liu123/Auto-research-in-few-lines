@@ -12,15 +12,33 @@ from .llm_adapters import get_adapter
 class AIAgent:
     """Wrapper for LLM CLI tools with session + guard hooks."""
 
-    def __init__(self, engine="claude", model=None, delay=0):
+    def __init__(self, engine="claude", model=None, delay=0, system_prompt="", default_guard=None, default_timeout=None, default_max_print_chars=None):
         self.engine = engine
         self.model = model or engine
         self.delay = delay
+        self.system_prompt = system_prompt
+        self.default_guard = default_guard
+        self.default_timeout = default_timeout
+        self.default_max_print_chars = default_max_print_chars
         self.adapter = get_adapter(self.model)
         self.session_id = None
 
-    def execute_safe(self, prompt, guard, new_session=False, timeout=None, model=None, **kwargs):
+    def ask(self, prompt, guard=IndexError, timeout=IndexError, max_print_chars=IndexError, new_session=False, model=None, **kwargs):
+        """
+        Execute an LLM command. 
+        - guard: If IndexError (default), use default_guard. If None, skip guard.
+        - timeout: If IndexError (default), use default_timeout.
+        - max_print_chars: If IndexError (default), use default_max_print_chars.
+        """
+        # Resolve defaults: local override > global default
+        effective_guard = self.default_guard if guard is IndexError else guard
+        effective_timeout = self.default_timeout if timeout is IndexError else timeout
+        effective_max_chars = self.default_max_print_chars if max_print_chars is IndexError else max_print_chars
+
         max_retries = 3
+        # Prepend system_prompt if set
+        full_prompt = self.system_prompt + "\n" + prompt if self.system_prompt else prompt
+
         for attempt in range(max_retries):
             try:
                 if self.delay > 0:
@@ -34,25 +52,24 @@ class AIAgent:
                 target_model = model or self.model
                 current_adapter = self.adapter
                 if model and model != self.model:
-                    # If a different model is requested, check if we need a different adapter
                     current_adapter = get_adapter(model)
 
-                guard.before()
+                if effective_guard:
+                    effective_guard.before()
 
                 cmd = current_adapter.build_command(
-                    prompt=prompt,
+                    prompt=full_prompt,
                     session_id=self.session_id,
                     model=target_model,
                     yolo=True,
                     **kwargs
                 )
-                run_kwargs = current_adapter.get_run_kwargs(prompt, os.environ.copy())
+                run_kwargs = current_adapter.get_run_kwargs(full_prompt, os.environ.copy())
 
                 # Use Popen to stream output in real-time
-                run_kwargs.pop("capture_output", None) # Popen doesn't use capture_output
+                run_kwargs.pop("capture_output", None)
                 run_kwargs["stdout"] = subprocess.PIPE
                 run_kwargs["stderr"] = subprocess.PIPE
-                # If input was in kwargs, we need to pass it to communicate
                 stdin_input = run_kwargs.pop("input", None)
 
                 print(f"[AIAgent] Executing {target_model}...")
@@ -78,51 +95,52 @@ class AIAgent:
                     proc.stdin.close()
 
                 try:
-                    proc.wait(timeout=timeout)
+                    proc.wait(timeout=effective_timeout)
                 except subprocess.TimeoutExpired:
                     proc.kill()
-                    print(f"\n[AIAgent WARNING] Execution timed out after {timeout} seconds. Returning placeholder.")
-                    # Instead of raising, we return a special placeholder so the loop can continue
-                    return f"TIMEOUT_ERROR: Agent execution timed out after {timeout}s"
+                    print(f"\n[AIAgent WARNING] Execution timed out after {effective_timeout} seconds.")
+                    return f"TIMEOUT_ERROR: Agent execution timed out after {effective_timeout}s"
                 finally:
                     t_out.join()
                     t_err.join()
 
                 full_stdout = "".join(stdout_chunks)
-                # 增加错误检测逻辑
                 parsed = current_adapter.parse_output(full_stdout, self.session_id)
-                # 兼容旧版本 adapter 返回 (text, session_id) 或新版本返回 dict 的情况
+                
                 if isinstance(parsed, dict):
                     response_text = parsed.get("text", "")
                     self.session_id = parsed.get("session_id")
+                    
+                    # Print response with optional truncation
+                    if effective_max_chars and len(response_text) > effective_max_chars:
+                        half = effective_max_chars // 2
+                        print(f"\n[AIAgent Response (Truncated)]:\n{response_text[:half]}\n... [truncated {len(response_text)-effective_max_chars} chars] ...\n{response_text[-half:]}")
+                    else:
+                        print(f"\n[AIAgent Response]:\n{response_text}")
 
                     if parsed.get("is_error") or proc.returncode != 0:
                         error_msg = parsed.get("error_detail") or parsed.get("text") or "Process failed"
-                        # --- RETRY LOGIC START ---
                         if attempt < max_retries - 1 and ("429" in error_msg or "capacity" in error_msg.lower()):
                             wait_time = (attempt + 1) * 60
-                            print(f"\n[AIAgent RETRY] Detected API congestion ({error_msg}). Waiting {wait_time}s before attempt {attempt+2}/{max_retries}...")
+                            print(f"\n[AIAgent RETRY] API congestion ({error_msg}). Waiting {wait_time}s...")
                             time.sleep(wait_time)
-                            guard.after() # Balance the before() call
+                            if effective_guard: effective_guard.after()
                             continue
-                        # --- RETRY LOGIC END ---
                         print(f"\n[AIAgent ERROR] {error_msg}")
                         raise RuntimeError(f"LLM Agent Execution Failed: {error_msg}")
 
                     response_text = parsed.get("text", "")
                 else:
-                    # Fallback for simple (text, session_id) tuple
                     response_text, self.session_id = parsed
 
-                guard.after()
+                if effective_guard:
+                    effective_guard.after()
                 return response_text
 
             except Exception as e:
-                # Catch-all for other runtime errors during execution that might be retryable
                 if attempt < max_retries - 1 and ("429" in str(e) or "capacity" in str(e).lower()):
                     wait_time = (attempt + 1) * 60
-                    print(f"\n[AIAgent RETRY] Exception occurred ({e}). Waiting {wait_time}s before attempt {attempt+2}/{max_retries}...")
+                    print(f"\n[AIAgent RETRY] Exception ({e}). Waiting {wait_time}s...")
                     time.sleep(wait_time)
-                    # We might need to ensure guard state is consistent here if needed
                     continue
                 raise e

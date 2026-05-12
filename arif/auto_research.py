@@ -59,6 +59,8 @@ class AutoResearch:
         exp_id = f"exp{B}.{L}.{S}"
         exp_dir = os.path.join(branch_dir, exp_id)
 
+        print(f"\n>>> Entering Experiment: {exp_id}")
+        
         base_dir = self._find_best_base(B)
         if not os.path.exists(exp_dir):
             shutil.copytree(base_dir, exp_dir)
@@ -74,10 +76,26 @@ class AutoResearch:
             self.current_exp_dir = None
             self.current_metadata = {}
 
-    def get_history(self):
+    def get_history(self, B=None, L=None, S=None, if_improved=None, limit=None, as_text=False):
+        """
+        Get experiment history with optional filtering.
+        ... (rest of docstring) ...
+        If as_text is True, returns a formatted string of hypothesis/summary/metrics.
+        """
+        def _check(val, filter_val):
+            if filter_val is None:
+                return True
+            if isinstance(filter_val, (list, tuple)) and len(filter_val) == 2:
+                return filter_val[0] < val < filter_val[1]
+            if isinstance(filter_val, (list, tuple)):
+                return val in filter_val
+            return val == filter_val
+
         history = []
         if not os.path.isdir(self.workspace_root):
-            return history
+            return "" if as_text else history
+
+        # ... (rest of filtering logic) ...
 
         # Get and sort branches numerically
         b_dirs = []
@@ -85,6 +103,8 @@ class AutoResearch:
             if d.startswith("Branch"):
                 try:
                     b_num = int(d.replace("Branch", ""))
+                    if not _check(b_num, B):
+                        continue
                     b_dirs.append((b_num, d))
                 except ValueError:
                     pass
@@ -96,12 +116,14 @@ class AutoResearch:
             # Get and sort experiments numerically
             e_dirs = []
             for d in os.listdir(b_path):
-                B, L, S = self._parse_exp_dirname(d)
-                if B is not None:
-                    e_dirs.append(((B, L, S), d))
+                curr_B, curr_L, curr_S = self._parse_exp_dirname(d)
+                if curr_B is not None:
+                    if not _check(curr_L, L) or not _check(curr_S, S):
+                        continue
+                    e_dirs.append(((curr_B, curr_L, curr_S), d))
             e_dirs.sort()
 
-            for (B, L, S), e_dir in e_dirs:
+            for (curr_B, curr_L, curr_S), e_dir in e_dirs:
                 exp_path = os.path.join(b_path, e_dir)
                 h_path = os.path.join(exp_path, "history.json")
                 if not os.path.isfile(h_path):
@@ -112,13 +134,89 @@ class AutoResearch:
                 except Exception:
                     continue
 
+                if if_improved is not None and data.get("if_improved") != if_improved:
+                    continue
+
                 # FORCE trust folder name metadata over JSON content
-                data["B"] = B
-                data["L"] = L
-                data["S"] = S
+                data["B"] = curr_B
+                data["L"] = curr_L
+                data["S"] = curr_S
                 data["exp_id"] = e_dir
                 history.append(data)
+
+        if limit is not None:
+            history = history[-limit:]
+            
+        if as_text:
+            text_blocks = []
+            for h in history:
+                block = f"[{h['exp_id']}] "
+                if h.get('hypothesis'): block += f"Hypothesis: {h['hypothesis']} "
+                if h.get('metric'): block += f"Metric: {h['metric']} "
+                if h.get('summary'): block += f"Summary: {h['summary']} "
+                if h.get('error'): block += f"Error: {h['error']} "
+                text_blocks.append(block.strip())
+            return "\n".join(text_blocks)
+            
         return history
+
+    def modify_and_run_loop(
+        self,
+        agent,
+        modify_prompt,
+        eval_cmd,
+        metric_name="Loss",
+        max_trials=3,
+        best_metric=float("inf"),
+        timeout=None,
+        max_print_chars=IndexError,
+    ):
+        """
+        Encapsulate the Modify -> Run -> Compare loop.
+        Provides detailed feedback (stdout/stderr) to the agent on failure/retry.
+        """
+        import re
+
+        trials_history = []
+        current_metric = float("inf")
+        if_improved = False
+        final_stdout, final_stderr = "", ""
+
+        for trial in range(1, max_trials + 1):
+            prompt = modify_prompt
+            if trial > 1:
+                feedback = f"\n\n[RETRY FEEDBACK] Your previous attempt(s) failed. Here is the execution history:\n"
+                for i, h in enumerate(trials_history):
+                    feedback += f"--- Trial {i+1} ---\nSTDOUT:\n{h['stdout']}\nSTDERR:\n{h['stderr']}\n"
+                feedback += "\nPlease analyze these results and try a different approach to improve the metric."
+                prompt += feedback
+
+            print(f"  Trial {trial}/{max_trials}: Modifying code...")
+            # agent.ask will use its default_guard, default_timeout, and default_max_print_chars if not provided
+            agent.ask(prompt, max_print_chars=max_print_chars)
+
+            print(f"  Trial {trial}/{max_trials}: Running evaluation...")
+            status, stdout, stderr = self.run_cmd(eval_cmd, timeout=timeout)
+            
+            # Extract metric (handling optional sign and decimals)
+            # No assumptions: user must provide the exact prefix (including colons/spaces) in metric_name
+            pattern = rf"{metric_name}([-+]?[0-9]*\.?[0-9]+)"
+            match = re.search(pattern, stdout, re.IGNORECASE)
+            current_metric = float(match.group(1)) if match else float("inf")
+            
+            trials_history.append({"stdout": stdout, "stderr": stderr, "metric": current_metric})
+            final_stdout, final_stderr = stdout, stderr
+
+            print(f"  Current {metric_name}: {current_metric:.4f} (Best: {best_metric:.4f})")
+
+            if_improved = current_metric < best_metric
+            if if_improved:
+                print(f"  SUCCESS: Improved from {best_metric:.4f} to {current_metric:.4f}!")
+                break
+            else:
+                print(f"  No improvement.")
+
+        return if_improved, current_metric, final_stdout, final_stderr
 
     def run_cmd(self, cmd, timeout=None):
         with open("stdout.log", "w") as f_out, open("stderr.log", "w") as f_err:
