@@ -21,8 +21,24 @@ class Guard:
 
     def _calculate_hashes(self):
         """Calculate hashes for all protected files in current working directory."""
+        import glob
         hashes = {}
+        
+        # Internal arif ignore list to prevent self-protection of workspaces or heavy git folders
+        ignores = {"agent_workspaces", ".git", "__pycache__", ".ipynb_checkpoints"}
+        if self.parent.log_path:
+            ignores.add(os.path.basename(self.parent.log_path))
+        
+        expanded_files = []
         for f in self.parent.protected_files:
+            if "*" in f:
+                # Expand glob pattern
+                matches = glob.glob(f)
+                expanded_files.extend([m for m in matches if m not in ignores])
+            else:
+                expanded_files.append(f)
+
+        for f in set(expanded_files):
             path = os.path.join(os.getcwd(), f)
             if os.path.exists(path):
                 if os.path.isfile(path):

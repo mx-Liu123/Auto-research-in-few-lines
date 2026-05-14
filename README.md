@@ -24,11 +24,12 @@ pip install -e .
 A wrapper for LLM CLI tools with persistent context.
 - `__init__(engine: str, system_prompt: str, default_guard: any, default_timeout: int | None, log_path: str | None)`: Set global defaults for all calls.
 - `ask(prompt, ...)`: Executes an LLM call. Supports local overrides for guard and timeout. Detailed responses are directed to `log_path`.
+- Supported adapters include Gemini, Qwen, Claude, OpenCode, and Codex CLI.
 
 ### AutoResearch
 Handles experiment lifecycle and data management.
 - `__init__(project_root: str, protected_files: list[str] | None, log_path: str | None)`: Initialize with a log filename. Now supports Windows via platform-safe `run_cmd`.
-- `modify_and_run_loop(agent, modify_prompt, eval_cmd, metric_extract, ...)`: A high-level abstraction for the "Modify -> Run -> Extract Metric" cycle with automatic retry feedback.
+- `modify_and_run_loop(agent, modify_prompt, eval_cmd, metric_extract, ..., smaller_is_better=True)`: A high-level abstraction for the "Modify -> Run -> Extract Metric" cycle with automatic retry feedback. Set `smaller_is_better=False` for metrics that should be maximized.
 - `get_history(..., as_text=True)`: Retrieves past experiments, optionally formatted as a single string for direct LLM context injection.
 - `enter_exp(B, L, S)`: Context manager for setting up an isolated experiment folder. Automatically logs entry info to terminal and log file.
 

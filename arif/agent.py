@@ -115,6 +115,16 @@ class AIAgent:
 
                 full_stdout = "".join(stdout_chunks)
                 full_stderr = "".join(stderr_chunks)
+
+                # Check for session resume errors
+                if proc.returncode != 0:
+                    err_low = full_stderr.lower()
+                    if "invalid session" in err_low or "error resuming" in err_low or "searched for sessions" in err_low:
+                        print(f"[AIAgent] Session {self.session_id} not found. Falling back to latest session...")
+                        self.session_id = "AUTO_RESUME"
+                        if effective_guard: effective_guard.after()
+                        continue
+
                 parsed = current_adapter.parse_output(full_stdout, self.session_id)
                 
                 if isinstance(parsed, dict):

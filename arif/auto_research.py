@@ -176,6 +176,7 @@ class AutoResearch:
         metric_extract: str = "Loss",
         max_trials: int = 3,
         best_metric: float = float("inf"),
+        smaller_is_better: bool = True,
         timeout: int | None = None,
     ) -> tuple[bool, float, str, str]:
         """
@@ -220,7 +221,10 @@ class AutoResearch:
 
             print(f"  Current {metric_extract}: {current_metric:.4f} (Best: {best_metric:.4f})")
 
-            if_improved = current_metric < best_metric
+            if smaller_is_better:
+                if_improved = current_metric < best_metric
+            else:
+                if_improved = current_metric > best_metric
             if if_improved:
                 print(f"  SUCCESS: Improved from {best_metric:.4f} to {current_metric:.4f}!")
                 break

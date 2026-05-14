@@ -2,6 +2,7 @@ from .gemini import GeminiAdapter
 from .qwen import QwenAdapter
 from .claude import ClaudeAdapter
 from .opencode import OpenCodeAdapter
+from .codex import CodexAdapter
 
 def get_adapter(model_name):
     """Factory to get the correct adapter based on model name."""
@@ -16,11 +17,15 @@ def get_adapter(model_name):
             if cli_type == "qwen": return QwenAdapter()
             if cli_type == "claude": return ClaudeAdapter()
             if cli_type == "opencode": return OpenCodeAdapter()
+            if cli_type == "codex": return CodexAdapter()
             return GeminiAdapter()
 
     # 2. Standard Prefix Detection
     if model_name.startswith("opencode"):
         return OpenCodeAdapter()
+
+    if model_name.startswith("codex"):
+        return CodexAdapter()
     
     if model_name.startswith("qwen:") or model_name == "qwen":
         return QwenAdapter()

@@ -10,20 +10,22 @@ class ClaudeAdapter(BaseAdapter):
         cmd.append("--dangerously-skip-permissions")
 
         # Optional: tool control
-        # Only add if explicitly passed in kwargs
         if "tools" in kwargs:
             tools = kwargs["tools"]
-            # Allow passing None or empty string to disable tools
             cmd.extend(["--tools", str(tools) if tools is not None else ""])
 
-        if session_id and session_id != "AUTO_RESUME":
-             cmd.extend(["-r", session_id])
-             
+        if session_id:
+            if session_id == "AUTO_RESUME":
+                cmd.append("--continue")
+            else:
+                cmd.extend(["-r", session_id])
+
         # If the user passed a specific model (not just "claude"), pass it via --model
         if model and model not in ["claude", "claude-cli"]:
              cmd.extend(["--model", model])
-             
+
         return cmd
+
 
     def parse_output(self, stdout, original_session_id):
         # Claude CLI in JSON mode may return multiple JSON objects 
