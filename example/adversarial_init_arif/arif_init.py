@@ -9,7 +9,7 @@ from arif import AIAgent, AutoResearch
 
 # --- User Configuration ---
 # let user input info
-task_background = 'This is a machine learning task and agent task is to reduce the loss in test set'
+task_background = 'This is a machine learning task and agent task is to reduce the loss in test set. The strategy.py should save a model.pth, and evaluator.py should load this weight to run inference on the test set.'
 your_idea_about_loop = 'Basically follows @example/adversarial_init_arif/basic_loop.py, just fill in when necessary, be modified and don\'t delete other parts or comments'
 METRIC_prompt = "evaluator.py metric use MSE"
 EVAL_SCRIPT = "evaluator.py"
