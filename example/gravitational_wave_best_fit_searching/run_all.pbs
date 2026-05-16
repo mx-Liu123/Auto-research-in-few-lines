@@ -1,0 +1,24 @@
+#!/bin/bash
+#PBS -N opt_eval_IMRI
+#PBS -l walltime=02:00:00
+#PBS -l select=1:ncpus=36:mpiprocs=1:ompthreads=36:mem=128gb:ngpus=1
+
+cd $PBS_O_WORKDIR
+
+image=/app1/common/singularity-img/hopper/cuda/cuda_12.1.0-cudnn8-devel-u20.04.sif
+source ~/.bashrc
+module load singularity
+
+# Run everything inside singularity
+singularity exec $image bash << EOF
+source ~/.bashrc
+conda activate few_env
+
+echo "--- STARTING OPTIMIZATION (1h limit) ---"
+# Run optimization for all indices with a 1 hour timeout
+timeout --foreground 1h python -u modular_optimization-Fisher.py --startingpoints signal_parameter_array_IMRI.npy || echo "Optimizer timed out or stopped."
+
+echo "--- STARTING TRUSTED EVALUATION ---"
+# Run evaluator
+python trusted_evaluator.py
+EOF

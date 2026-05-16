@@ -1,0 +1,19 @@
+#!/bin/bash
+#PBS -N eval_only_IMRI
+#PBS -l walltime=00:20:00
+#PBS -l select=1:ncpus=36:mpiprocs=1:ompthreads=36:mem=128gb:ngpus=1
+
+cd $PBS_O_WORKDIR
+
+image=/app1/common/singularity-img/hopper/cuda/cuda_12.1.0-cudnn8-devel-u20.04.sif
+source ~/.bashrc
+module load singularity
+
+# Run everything inside singularity
+singularity exec $image bash << EOF
+source ~/.bashrc
+conda activate few_env
+
+echo "--- STARTING TRUSTED EVALUATION ONLY ---"
+python trusted_evaluator.py
+EOF
