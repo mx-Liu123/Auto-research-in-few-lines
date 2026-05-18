@@ -29,16 +29,16 @@ run_task() {
     # Actually, let's use the PBS default names if we don't redirect in the script.
     # In run_all.pbs I didn't redirect stdout/stderr to specific files, so they will be $PBS_JOBNAME.o$JOB_ID
     
-    STDOUT_FILE="opt_eval_IMRI.o$JOB_ID"
-    STDERR_FILE="opt_eval_IMRI.e$JOB_ID"
+    STDOUT_FILE=$(ls *.o${JOB_ID} 2>/dev/null | head -n 1)
     
     while true; do
-        if [ -e "$STDOUT_FILE" ]; then break; fi
+        STDOUT_FILE=$(ls *.o${JOB_ID} 2>/dev/null | head -n 1)
+        if [ -n "$STDOUT_FILE" ] && [ -e "$STDOUT_FILE" ]; then break; fi
         if ! qstat $JOB_ID >/dev/null 2>&1; then 
             echo "⚠️ Job finished/died before creating stdout."
-            # Check if it finished very fast
             sleep 2
-            if [ -e "$STDOUT_FILE" ]; then break; fi
+            STDOUT_FILE=$(ls *.o${JOB_ID} 2>/dev/null | head -n 1)
+            if [ -n "$STDOUT_FILE" ] && [ -e "$STDOUT_FILE" ]; then break; fi
             return 1
         fi
         sleep 5
@@ -57,6 +57,9 @@ run_task() {
     wait $TAIL_PID 2>/dev/null
     
     echo "✅ Job $JOB_ID finished."
+    
+    # Find stderr file too
+    STDERR_FILE=$(ls *.e${JOB_ID} 2>/dev/null | head -n 1)
     
     # Print logs
     echo "--- FULL STDOUT ---"

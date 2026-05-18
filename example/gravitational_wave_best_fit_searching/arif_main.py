@@ -6,7 +6,7 @@ from arif import AutoResearch, AIAgent
 def main():
     # --- Configuration ---
     # Global Baseline Control
-    BASELINE_UNFINISHED_COUNT = 8.0
+    BASELINE_UNFINISHED_COUNT = 4.057084139683834
     
     # PBS walltime is 30m, so we wait up to 40m for safety
     AGENT_TIMEOUT = 600  # 10 minutes for the agent
@@ -110,7 +110,7 @@ def main():
                     "3. Ensure the 'argparse' section remains intact and functional.\n"
                     "4. Maintain consistent indentation and coding style."
                 ),
-                eval_cmd="bash auto_run.sh",
+                eval_cmd="bash -l -c './auto_run.sh'",
                 metric_extract='"metric": ',
                 best_metric=best_mismatch,
                 max_trials=3,
