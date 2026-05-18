@@ -15,6 +15,8 @@ The framework follows a "Minimalist & Ergonomic" approach: the library handles t
 ## Installation
 
 ```bash
+git clone https://github.com/mx-Liu123/Auto-research-in-few-lines.git
+cd Auto-research-in-few-lines
 pip install -e .
 ```
 
