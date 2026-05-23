@@ -145,6 +145,10 @@ def evaluate_all(pa_template=None):
         if mismatch > 0.1:
             unfinished_indices.append(idx)
             
+    mismatch_array = np.array(all_mismatches)
+    true_mismatch_file = f"true_mismatch_{scenario}_{pa_template}.npy"
+    np.save(true_mismatch_file, mismatch_array)
+            
     return len(unfinished_indices), all_mismatches
 
 if __name__ == "__main__":

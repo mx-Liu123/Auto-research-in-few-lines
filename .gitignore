@@ -29,6 +29,10 @@ test_project/
 search_results.csv
 debug_output.txt
 
+# PBS Logs
+*.o[0-9]*
+*.e[0-9]*
+
 # Environments
 .env
 .venv

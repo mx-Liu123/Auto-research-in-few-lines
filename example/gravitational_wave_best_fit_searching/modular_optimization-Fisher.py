@@ -408,16 +408,27 @@ def main():
     scenario = utils.scenario; pa_template = utils.pa_template
     signal_param_array = utils.load_signal_param_array()
 
-    params_filename = f"optimized_params_{scenario}_{pa_template}.npy"; mismatch_filename = f"optimized_mismatch_{scenario}_{pa_template}.npy"
+    params_filename = f"optimized_params_{scenario}_{pa_template}.npy"
+    optimized_mismatch_filename = f"optimized_mismatch_{scenario}_{pa_template}.npy"
+    true_mismatch_filename = f"true_mismatch_{scenario}_{pa_template}.npy"
     
+    # 1. Load Mismatches (prioritize 'true' evaluator result)
+    if os.path.exists(true_mismatch_filename):
+        print(f"Loading mismatches from evaluator: {true_mismatch_filename}")
+        all_optimized_mismatch = np.load(true_mismatch_filename)
+    elif os.path.exists(optimized_mismatch_filename):
+        all_optimized_mismatch = np.load(optimized_mismatch_filename)
+    else:
+        all_optimized_mismatch = np.ones(signal_param_array.shape[0])
+
+    # 2. Load Parameters
     if args.startingpoints:
         print(f"Loading search starting points from explicit path: {args.startingpoints}")
         all_optimized_params = np.load(args.startingpoints)
-        all_optimized_mismatch = np.ones(all_optimized_params.shape[0])
-    elif os.path.exists(params_filename) and os.path.exists(mismatch_filename):
-        all_optimized_params = np.load(params_filename); all_optimized_mismatch = np.load(mismatch_filename)
+    elif os.path.exists(params_filename):
+        all_optimized_params = np.load(params_filename)
     else:
-        all_optimized_params = signal_param_array.copy(); all_optimized_mismatch = np.ones(signal_param_array.shape[0])
+        all_optimized_params = signal_param_array.copy()
     
     if args.grid_index is not None: indices = [args.grid_index]
     else:
@@ -508,7 +519,7 @@ def main():
                         all_optimized_mismatch[idx] = mm; nr = sig_row.copy()
                         if pa_template == '0PA': nr[:5] = p_fi[:5]; nr[12], nr[13], nr[11] = p_fi[5], p_fi[6], p_fi[7]
                         else: nr[:5] = p_fi[:5]; nr[16], nr[12], nr[13], nr[11] = p_fi[5], p_fi[6], p_fi[7], p_fi[8]
-                        all_optimized_params[idx] = nr; np.save(params_filename, all_optimized_params); np.save(mismatch_filename, all_optimized_mismatch)
+                        all_optimized_params[idx] = nr; np.save(params_filename, all_optimized_params); np.save(optimized_mismatch_filename, all_optimized_mismatch)
                         print(f"  [CHECKPOINT] New best real mismatch: {mm:.4f}")
                     
         obj_l2 = objective_factory(pa_template, 'optimal_snr', ctx, True, True, True, global_best_no_max, (400, 1800, 1.2))
@@ -562,7 +573,7 @@ def main():
                 all_optimized_mismatch[idx] = curr_miss; nr = sig_row.copy()
                 if pa_template == '0PA': nr[:5] = p_fi[:5]; nr[12], nr[13], nr[11] = p_fi[5], p_fi[6], p_fi[7]
                 else: nr[:5] = p_fi[:5]; nr[16], nr[12], nr[13], nr[11] = p_fi[5], p_fi[6], p_fi[7], p_fi[8]
-                all_optimized_params[idx] = nr; np.save(params_filename, all_optimized_params); np.save(mismatch_filename, all_optimized_mismatch)
+                all_optimized_params[idx] = nr; np.save(params_filename, all_optimized_params); np.save(optimized_mismatch_filename, all_optimized_mismatch)
                 print(f"  [FINAL POLISH] New best mismatch: {all_optimized_mismatch[idx]:.6f}")
         break
 
