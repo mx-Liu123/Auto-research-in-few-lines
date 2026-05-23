@@ -43,16 +43,25 @@ def build_waveform_response(T: float, dt: float, use_gpu: bool = False) -> Respo
     )
     return response
 
-def evaluate_all(pa_template='0PA'):
+def evaluate_all(pa_template=None):
+    # Use global config if not provided
+    if pa_template is None:
+        pa_template = utils.pa_template
+    
+    scenario = utils.scenario
+
     # 1. Load ground truth
-    true_params_all = np.load("signal_parameter_array_IMRI.npy")
+    true_params_filename = f"signal_parameter_array_{scenario}.npy"
+    if not os.path.exists(true_params_filename):
+        raise FileNotFoundError(f"Required signal file not found: {true_params_filename}")
+        
+    true_params_all = np.load(true_params_filename)
     num_pts = true_params_all.shape[0]
     
     # 2. Load optimized parameters
-    opt_file = f"optimized_params_IMRI_{pa_template}.npy"
+    opt_file = f"optimized_params_{scenario}_{pa_template}.npy"
     if not os.path.exists(opt_file):
-        print(f"Error: {opt_file} not found")
-        return num_pts, [1.0] * num_pts
+        raise FileNotFoundError(f"Required optimized parameters file not found: {opt_file}")
     
     opt_params_all = np.load(opt_file)
     
