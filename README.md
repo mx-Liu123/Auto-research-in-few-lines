@@ -5,7 +5,7 @@ This repository allows users to build customized auto-research loops in just a f
 A lightweight Python micro-framework for LLM-driven research experiments.
 
 ## Core Philosophy
-The framework follows a "Minimalist & Ergonomic" approach: the library handles the underlying infrastructure and common patterns, while the user defines the high-level logic:
+The framework follows a minimalist approach: the library manages CLI interfacing and common patterns, while the user defines the high-level logic:
 - **Isolated Workspaces**: Automatic snapshotting of project state for every experiment.
 - **Branch Management**: Hierarchical organization (B.L.S) for research directions.
 - **Ergonomic LLM Interface**: Global system prompts, security guards, and timeouts.
