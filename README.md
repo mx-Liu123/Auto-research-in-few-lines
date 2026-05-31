@@ -1,4 +1,4 @@
-# arif: Auto-Research In Few-lines
+# Arif: Auto-Research In Few-lines
 
 This repository enables users to build customized automated research loops with just a few lines of Python, striking an effective balance between creative freedom and experimental control. Crucially, you can direct your coding agent to use `arif` to autonomously construct and monitor its own research workflows.
 
