@@ -20,6 +20,38 @@ cd Auto-research-in-few-lines
 pip install -e .
 ```
 
+---
+
+🚀 Quick Start
+
+Once installed, you can quickly initialize a research loop in your project directory using the following commands. We explicitly list all parameters to make it easy for you to fine-tune them for your specific task:
+
+```bash
+# 1. Copy the initialization script and loop template to your project
+cp example/cold_start_karpathy_autoresearch/{arif_init.py,basic_loop.py} ./
+
+# 2. Run the initialization script (with full default parameters)
+python arif_init.py \
+  --task_background "This is a language model pretraining task on Climbmix-400B." \
+  --your_idea_about_loop "Basically follows Standard Code Pattern in @README_for_agent.md" \
+  --METRIC_prompt "evaluator.py metric use val_bpb" \
+  --HOW_TO_RUN_YOUR_CODE "uv run train.py" \
+  --DIAGNOSTIC_TIMEOUT 900 \
+  --max_retry 5 \
+  --cli_type "gemini"
+```
+
+Parameter Descriptions:
+ * `--task_background`: Description of the task, telling the Agent what the optimization goal is.
+ * `--your_idea_about_loop`: Expectations for the experiment loop (e.g., which template to reference).
+ * `--METRIC_prompt`: Natural language description of the metric, used to guide the generation of the evaluator.
+ * `--HOW_TO_RUN_YOUR_CODE`: The command to run your original training code.
+ * `--DIAGNOSTIC_TIMEOUT`: Maximum wait time (in seconds) for the diagnostic run. Recommended: training time + compilation overhead.
+ * `--max_retry`: Maximum number of retries when automatically generating the evaluator and loop scripts.
+ * `--cli_type`: The model engine type to use (default is `gemini`).
+
+After the script finishes, it will generate `evaluator.py` and `arif_loop.py`. You can then start the automated research process by running `python arif_loop.py`.
+
 ## Core Components
 
 ### AIAgent
