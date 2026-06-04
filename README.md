@@ -61,6 +61,7 @@ Parameter Descriptions:
  After the script finishes, it will generate the following components:
  * **`evaluator.py`**: An independent, anti-cheating judge that extracts metrics from your project's output artifacts (model weights etc).
  * **`arif_loop.py`**: The main autonomous loop that orchestrates experiment branches and coordinates the "Modify -> Run -> Evaluate" cycle.
+ * **`arif_init_output.log`**: A detailed log containing the full trace of LLM prompts and agent responses. **Check this if the initialization process fails or behaves unexpectedly.**
 
  You can then start the automated research process by running `python arif_loop.py`.
 
