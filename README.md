@@ -28,7 +28,7 @@ Once installed, you can quickly initialize a research loop in your project direc
 
 ```bash
 # 1. Copy the initialization script and loop template to your project
-cp ../example/Auto-research-in-few-lines/cold_start_karpathy_autoresearch/{arif_init.py,basic_loop.py} ./
+cp ../Auto-research-in-few-lines/example/cold_start_karpathy_autoresearch/{arif_init.py,basic_loop.py} ./
 
 # 2. Run the initialization script (with full default parameters)
 python arif_init.py \
