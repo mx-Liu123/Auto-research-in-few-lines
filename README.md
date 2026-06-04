@@ -31,7 +31,7 @@ pip install -e .
 
 ## Quick Start
 
-Once installed, you can quickly initialize a research loop in your project directory using the following commands. We explicitly list all parameters to make it easy for you to fine-tune them for your specific task:
+Once installed, you can use **`arif_init.py`**, a bootstrap script that orchestrates Arif functions to automatically generate an evaluation judge and a research loop tailored to your specific task.
 
 ```bash
 # 1. Copy the initialization script and agent guidelines to your project
@@ -56,27 +56,35 @@ Parameter Descriptions:
  * `--HOW_TO_RUN_YOUR_CODE`: The command to run your original training code.
  * `--DIAGNOSTIC_TIMEOUT`: Maximum wait time (in seconds) for the diagnostic run. Recommended: training time + compilation overhead.
  * `--max_retry`: Maximum number of retries when automatically generating the evaluator and loop scripts.
- * `--cli_type`: The model engine type to use (default is `gemini`).
+ * `--cli_type`: The model engine type to use (default is `gemini`). Supported engines include: `claude`, `codex`, `gemini`, `opencode`, `qwen`.
 
-After the script finishes, it will generate `evaluator.py` and `arif_loop.py`. You can then start the automated research process by running `python arif_loop.py`.
+ After the script finishes, it will generate the following components:
+ * **`evaluator.py`**: An independent, anti-cheating judge that extracts metrics from your project's output artifacts (model weights etc).
+ * **`arif_loop.py`**: The main autonomous loop that orchestrates experiment branches and coordinates the "Modify -> Run -> Evaluate" cycle.
 
-## Core Components
+ You can then start the automated research process by running `python arif_loop.py`.
 
-### AIAgent
-A wrapper for LLM CLI tools with persistent context.
-- `__init__(engine: str, system_prompt: str, default_guard: any, default_timeout: int | None, log_path: str | None)`: Set global defaults for all calls.
-- `ask(prompt, ...)`: Executes an LLM call. Supports local overrides for guard and timeout. Detailed responses are directed to `log_path`.
-- Supported adapters include Gemini, Qwen, Claude, OpenCode, and Codex CLI.
+ ## Core Components
 
-### AutoResearch
-Handles experiment lifecycle and data management.
-- `__init__(project_root: str, protected_files: list[str] | None, log_path: str | None)`: Initialize with a log filename. Now supports Windows via platform-safe `run_cmd`.
-- `modify_and_run_loop(agent, modify_prompt, eval_cmd, metric_extract, ..., smaller_is_better=True)`: A high-level abstraction for the "Modify -> Run -> Extract Metric" cycle with automatic retry feedback. Set `smaller_is_better=False` for metrics that should be maximized.
-- `get_history(..., as_text=True)`: Retrieves past experiments, optionally formatted as a single string for direct LLM context injection.
-- `enter_exp(B, L, S)`: Context manager for setting up an isolated experiment folder. Automatically logs entry info to terminal and log file.
+ ### AIAgent
+ A wrapper for LLM CLI tools with persistent context and retry logic.
+ - `__init__(engine: str, model: str | None, delay: int, system_prompt: str, default_guard: any, default_timeout: int | None, log_path: str | None)`: Set global defaults.
+ - `ask(prompt, guard, timeout, new_session, model, ...)`: Executes an LLM call with optional local overrides. Automatically handles rate limits and session persistence.
+ - Supported adapters: Gemini, Qwen, Claude, OpenCode, and Codex CLI.
 
-### Guard
-Monitors essential files via MD5 hashing to prevent unauthorized modifications to evaluators or datasets.
+ ### AutoResearch
+ Handles the experiment lifecycle, workspace isolation, and history management.
+ - `__init__(project_root: str, protected_files: list[str] | None, log_path: str | None)`: Initialize workspace root (`agent_workspaces/`). Supports cross-platform path handling.
+ - `modify_and_run_loop(agent, modify_prompt, eval_cmd, metric_extract, ..., smaller_is_better=True)`: High-level abstraction for the iterative "Modify -> Run -> Evaluate" cycle with automatic feedback-based retries.
+ - `get_history(B, L, S, if_improved, limit, as_text=True)`: Retrieves past experiment data, supporting range filtering and text formatting for LLM context.
+ - `enter_exp(B, L, S)`: Context manager that creates and enters an isolated snapshot folder for a specific experiment trial.
+ - `save_history(metric, if_improved, ...)`: Persists trial results and summaries to `history.json` within the experiment folder.
+
+ ### Guard
+ An anti-cheating and integrity monitor that prevents unauthorized modifications to critical files.
+ - Uses MD5 hashing to snapshot protected files (including directories) before LLM operations.
+ - Automatically detects changes and restores files from the `project_root` if tampering is detected.
+
 
 ## Examples
 
