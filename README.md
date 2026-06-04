@@ -1,16 +1,23 @@
 # Arif: Auto-Research In Few-lines
 
-This repository allows users to build customized auto-research loops in just a few lines of Python, orchestrating your coding CLIs and shell commands, striking an effective balance between creative freedom and experimental control. Crucially, you can direct your coding agent to use `arif` to autonomously construct and monitor its own research workflows.
-
-A lightweight Python micro-framework for LLM-driven research experiments.
+This repository allows you to build your own auto-research loops in just a few lines of Python by orchestrating your coding CLIs (Claude Code, Codex, Opencode, Gemini CLI, etc.) and shell commands. Our to-do list includes enabling your coding agent to use `arif` to autonomously construct and monitor its own research workflows.
 
 ## Core Philosophy
-The framework follows a minimalist approach: the library manages CLI interfacing and common patterns, while the user defines the high-level logic:
-- **Isolated Workspaces**: Automatic snapshotting of project state for every experiment.
-- **Branch Management**: Hierarchical organization (B.L.S) for research directions.
-- **Ergonomic LLM Interface**: Global system prompts, security guards, and timeouts.
-- **Automated Trials**: Built-in loops for modification, evaluation, and feedback.
-- **History Bookkeeping**: Pre-formatted context injection for LLM lessons.
+An auto-research is essentially an evolution tree, where each node is an experiment. In Arif, an experiments is organized into a isolated folder expB.L.S (Branch, Level, Step) recording its code and outputs:
+```text
+agent_workspaces/
+└── Branch1/
+    ├── exp1.0.0/ (Baseline)
+    ├── exp1.1.1/ (Failed attempt based on 1.0.0)
+    ├── exp1.1.2/ (Success attempt based on 1.0.0)    
+    └── exp1.2.1/ (Next attempt based on 1.1.2)
+```
+
+## Features
+- **CLI Based**: Directly pass your prompt to your CLI, utilizing its intra-folder context management, tools and online search.
+- **Inter-Folder History Management**: One line to save history.json with customized keys or load them at another experiment folder.
+
+![Core Functions](assets/core_functions_of_arif.png)
 
 ## Installation
 
@@ -30,9 +37,7 @@ Once installed, you can quickly initialize a research loop in your project direc
 # 1. Copy the initialization script and agent guidelines to your project
 cp example/cold_start_generate_evaluator_and_loop_file/{arif_init.py,README_for_agent.md} /your_project/
 cd /your_project/
-
-# 2. Run the initialization script (with full default parameters).
-# Note: This operation might modify your project code, so please back up your files before initiating.
+# 2. Run the initialization script (with full default parameters), noted that this operation might modify your project code so backup before initiating.
 python arif_init.py \
   --task_background "This is a language model pretraining task on Climbmix-400B." \
   --your_idea_about_loop "Basically follows Standard Code Pattern in @README_for_agent.md" \
@@ -72,17 +77,6 @@ Handles experiment lifecycle and data management.
 
 ### Guard
 Monitors essential files via MD5 hashing to prevent unauthorized modifications to evaluators or datasets.
-
-## Directory Structure
-
-Experiments are organized into isolated folders to ensure reproducibility:
-```text
-agent_workspaces/
-└── Branch1/
-    ├── exp1.0.0/ (Baseline)
-    ├── exp1.1.1/ (Success attempt)
-    └── exp1.1.2/ (Next attempt based on 1.1.1)
-```
 
 ## Examples
 
