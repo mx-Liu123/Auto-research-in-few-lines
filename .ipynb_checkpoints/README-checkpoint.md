@@ -30,9 +30,7 @@ Once installed, you can quickly initialize a research loop in your project direc
 # 1. Copy the initialization script and agent guidelines to your project
 cp example/cold_start_generate_evaluator_and_loop_file/{arif_init.py,README_for_agent.md} /your_project/
 cd /your_project/
-
-# 2. Run the initialization script (with full default parameters).
-# Note: This operation might modify your project code, so please back up your files before initiating.
+# 2. Run the initialization script (with full default parameters), noted that this operation might modify your project code so backup before initiating.
 python arif_init.py \
   --task_background "This is a language model pretraining task on Climbmix-400B." \
   --your_idea_about_loop "Basically follows Standard Code Pattern in @README_for_agent.md" \
