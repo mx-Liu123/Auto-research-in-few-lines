@@ -45,7 +45,7 @@ Then run `python arif_init.py`. The script writes `arif_run.py` and refreshes `H
 - **`agent.ask(prompt, model=None, new_session=False)`**: You can dynamically switch to a different LLM model or start a fresh session for summaries or secondary tasks.
 - **`AIAgent(..., log_path="arif_LLM_response.log")`**: Exports prompts, CLI output, and parsed responses to a local log file for auditability.
 
-## Recommended Workflow Pattern (Reference: `example/basic_loop.py`)
+## Recommended Workflow Pattern (Reference: Standard Code Pattern)
 
 1. **Initialization**: Configure global timeouts, system prompts, and file protection.
 2. **Experiment Isolation**: Use `enter_exp` to create a fresh workspace for every trial.
@@ -58,59 +58,61 @@ Then run `python arif_init.py`. The script writes `arif_run.py` and refreshes `H
 5. **Autonomous Loop**: Use `ar.modify_and_run_loop()` to handle the internal "Modify -> Run -> Self-Correct" cycle.
 6. **Evolution Logic**: Update `L` (Level) when the metric improves, otherwise increment `S` (Step).
 
-## Standard Code Pattern
+## Standard Code Pattern (Your loop should basically follow this unless specifically required by the user)
 
 ```python
 from arif import AutoResearch, AIAgent
 
-# --- Configuration ---
-AGENT_TIMEOUT, CMD_TIMEOUT = None, 600 
-LOG_NAME = "arif_LLM_response.log" 
-SYSTEM_PROMPT = "This is a ML project. Modify train.py to reduce loss. Focus on CWD."
+def main():
+    # --- Configuration ---
+    AGENT_TIMEOUT, CMD_TIMEOUT = None, 900 # No agent timeout, 15min for command (compilation takes time)
+    main_prompt = "This is a language model pretraining task on Climbmix-400B. The goal is to minimize val_bpb within a 300s budget on a 50M parameter model. Modify train.py to reduce val_bpb. The script must save the trained model weights to 'model.pth' before exiting. Focus on CWD and do not read or modify external files. Do not run the code ALWAYS, I will run for you."
+    
+    # 1. Initialize with Defaults and optional log_path
+    log_name = "arif_LLM_response.log" # Log saved inside each exp folder
+    ar = AutoResearch(project_root="./", protected_files=["evaluator.py", "evaluator_lib/", "prepare.py", "pyproject.toml", "uv.lock"], log_path=log_name) # Initialize with protection
+    agent = AIAgent(
+        engine="claude", # Use Claude engine
+        system_prompt=main_prompt, # Set global task instructions
+        default_guard=ar.guard, # Enable file modification guard
+        default_timeout=AGENT_TIMEOUT, # Global timeout for LLM calls
+        log_path=log_name # Log full trace to local file
+    )
+    B, L, S = ar.new_branch() # Start new branch
+    best_metric = float("inf") # Tracking best val_bpb for evolution
 
-# 1. Initialize
-ar = AutoResearch(project_root="./", protected_files=["evaluator.py"], log_path=LOG_NAME)
-agent = AIAgent(
-    engine="claude", 
-    system_prompt=SYSTEM_PROMPT, 
-    default_guard=ar.guard, 
-    default_timeout=AGENT_TIMEOUT,
-    log_path=LOG_NAME
-)
+    for _ in range(20): # Run for 20 experiment iterations
+        with ar.enter_exp(B, L, S): # Enter isolated workspace folder
+            # 2. Simplified History Context (Directly as text)
+            history_text = ar.get_history(L=L, if_improved=False, limit=3, as_text=True) # Fetch lessons from failures
 
-B, L, S = ar.new_branch() 
-best_metric = float("inf")
+            print(f"--- Experiment {B}.{L}.{S} ---")
+            print("Generating experiment hypothesis...")
+            hypothesis = agent.ask(f"Previous lessons:\n{history_text}\nFirst observe the code and previous lessons, then propose a hypothesis to improve the code.", new_session=True) # Plan next change
 
-# 2. Research Loop
-for i in range(20):
-    with ar.enter_exp(B, L, S):
-        # Fetch lessons from previous failures at current Level
-        history_text = ar.get_history(L=L, if_improved=False, limit=3, as_text=True)
+            # 3. High-level Modify-Run Loop
+            success, current_metric, _, _ = ar.modify_and_run_loop(
+                agent, 
+                modify_prompt="Modify the code based on hypothesis. But dont run the code.", # Instructions for agent
+                eval_cmd="uv run train.py && uv run python evaluator.py", # Command to run evaluation
+                metric_extract="evaluator_metric: ", # Prefix to extract score from stdout
+                best_metric=best_metric, # Target to beat
+                max_trials=3, # Retry up to 3 times on failure
+                timeout=CMD_TIMEOUT # Execution time limit
+                smaller_is_better=True
+            )
 
-        # Propose hypothesis
-        hypothesis = agent.ask(f"Lessons:\n{history_text}\nPropose a hypothesis.", new_session=True)
+            summary = agent.ask("Summarize the experiment.") # Get summary for history log
 
-        # High-level Modify-Run-Retry cycle
-        success, current_metric, stdout, stderr = ar.modify_and_run_loop(
-            agent, 
-            modify_prompt=f"Hypothesis: {hypothesis}\nImplement the change.", 
-            eval_cmd="python train.py && python evaluator.py",
-            metric_extract="Loss: ",
-            best_metric=best_metric,
-            smaller_is_better=True,
-            max_trials=3,
-            timeout=CMD_TIMEOUT
-        )
+            # 4. Save and Evolve
+            ar.save_history(metric=current_metric, if_improved=success, hypothesis=hypothesis, summary=summary) # Persist trial data
+            if success:
+                best_metric, L, S = current_metric, L + 1, 1 # Increment level on improvement
+            else:
+                S += 1 # Increment step on failure
 
-        # Summarize and Save
-        summary = agent.ask("Summarize the experiment results.")
-        ar.save_history(metric=current_metric, if_improved=success, hypothesis=hypothesis, summary=summary)
-
-        # 3. Evolution Logic
-        if success:
-            best_metric, L, S = current_metric, L + 1, 1 
-        else:
-            S += 1
+if __name__ == "__main__":
+    main()
 ```
 
 ## Best Practices

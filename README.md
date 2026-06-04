@@ -27,8 +27,8 @@ pip install -e .
 Once installed, you can quickly initialize a research loop in your project directory using the following commands. We explicitly list all parameters to make it easy for you to fine-tune them for your specific task:
 
 ```bash
-# 1. Copy the initialization script and loop template to your project
-cp ../Auto-research-in-few-lines/example/cold_start_karpathy_autoresearch/{arif_init.py,basic_loop.py} ./
+# 1. Copy the initialization script and agent guidelines to your project
+cp example/cold_start_generate_evaluator_and_loop_file/{arif_init.py,README_for_agent.md} ./
 
 # 2. Run the initialization script (with full default parameters)
 python arif_init.py \
@@ -40,6 +40,7 @@ python arif_init.py \
   --max_retry 5 \
   --cli_type "gemini"
 ```
+
 
 Parameter Descriptions:
  * `--task_background`: Description of the task, telling the Agent what the optimization goal is.
