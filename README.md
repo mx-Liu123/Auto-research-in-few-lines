@@ -22,7 +22,7 @@ pip install -e .
 
 ---
 
-🚀 Quick Start
+## Quick Start
 
 Once installed, you can quickly initialize a research loop in your project directory using the following commands. We explicitly list all parameters to make it easy for you to fine-tune them for your specific task:
 
