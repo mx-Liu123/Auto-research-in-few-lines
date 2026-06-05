@@ -104,3 +104,15 @@ python arif_run.py
 
 ## License
 MIT
+
+## Acknowledgments
+
+Special thanks to:
+* **Prof. Alvin J. K. Chua** (PhD supervisor)
+* **Prof. Duane LOH** (Ne-Te) and his [AI for Science Discovery Gym](https://duaneloh.notion.site/AI-for-Science-Discovery-Gym-24127332a77880b2a51cd242a1ee0c2c)
+* **Mr. Zhu** for providing computation resources
+
+This project was inspired by:
+* [AgentCommander](https://github.com/mx-Liu123/AgentCommander)
+* [autoresearch](https://github.com/karpathy/autoresearch) by Andrej Karpathy
+* [Auto-claude-code-research-in-sleep (ARIS ⚔️🌙)](https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep)
