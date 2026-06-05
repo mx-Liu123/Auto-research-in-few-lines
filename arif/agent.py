@@ -39,7 +39,6 @@ class AIAgent:
         effective_timeout = self.default_timeout if timeout is IndexError else timeout
 
         max_retries = 3
-        # Prepend system_prompt if set
         full_prompt = self.system_prompt + "\n" + prompt if self.system_prompt else prompt
 
         for attempt in range(max_retries):
@@ -51,12 +50,12 @@ class AIAgent:
                 if new_session:
                     self.session_id = None
 
-                # Determine target model and adapter
                 target_model = model or self.model
                 current_adapter = self.adapter
                 if model and model != self.model:
                     current_adapter = get_adapter(model)
 
+                # --- STEP 1: Guard Before ---
                 if effective_guard:
                     effective_guard.before()
 
@@ -69,7 +68,6 @@ class AIAgent:
                 )
                 run_kwargs = current_adapter.get_run_kwargs(full_prompt, os.environ.copy())
 
-                # Use Popen to stream output in real-time
                 run_kwargs.pop("capture_output", None)
                 run_kwargs["stdout"] = subprocess.PIPE
                 run_kwargs["stderr"] = subprocess.PIPE
@@ -86,11 +84,13 @@ class AIAgent:
 
                 import threading
                 def stream_reader(pipe, chunks, prefix):
-                    for line in iter(pipe.readline, ""):
-                        if line:
-                            # Log every line, but don't print to terminal
-                            self._log(f"[{prefix}] {line.strip()}")
-                            chunks.append(line)
+                    while True:
+                        line = pipe.readline()
+                        if not line: break
+                        if isinstance(line, bytes):
+                            line = line.decode('utf-8', errors='replace')
+                        self._log(f"[{prefix}] {line.strip()}")
+                        chunks.append(line)
 
                 t_out = threading.Thread(target=stream_reader, args=(proc.stdout, stdout_chunks, "LLM STDOUT"))
                 t_err = threading.Thread(target=stream_reader, args=(proc.stderr, stderr_chunks, "LLM STDERR"))
@@ -101,62 +101,74 @@ class AIAgent:
                     proc.stdin.write(stdin_input)
                     proc.stdin.close()
 
+                # --- STEP 2: Execution & Timeout Handling ---
+                timed_out = False
                 try:
                     proc.wait(timeout=effective_timeout)
                 except subprocess.TimeoutExpired:
                     proc.kill()
-                    err_msg = f"[AIAgent WARNING] Execution timed out after {effective_timeout} seconds."
+                    timed_out = True
+                    err_msg = f"[AIAgent WARNING] Execution timed out after {effective_timeout}s."
                     print(err_msg)
                     self._log(err_msg)
-                    return f"TIMEOUT_ERROR: Agent execution timed out after {effective_timeout}s"
                 finally:
                     t_out.join()
                     t_err.join()
 
+                if timed_out:
+                    # Guard After must run even on timeout
+                    if effective_guard: effective_guard.after()
+                    return f"TIMEOUT_ERROR: Agent execution timed out after {effective_timeout}s"
+
                 full_stdout = "".join(stdout_chunks)
                 full_stderr = "".join(stderr_chunks)
 
-                # Check for session resume errors
                 if proc.returncode != 0:
                     err_low = full_stderr.lower()
                     if "invalid session" in err_low or "error resuming" in err_low or "searched for sessions" in err_low:
-                        print(f"[AIAgent] Session {self.session_id} not found. Falling back to latest session...")
+                        print(f"[AIAgent] Session {self.session_id} not found. Resuming latest...")
                         self.session_id = "AUTO_RESUME"
                         if effective_guard: effective_guard.after()
                         continue
 
                 parsed = current_adapter.parse_output(full_stdout, self.session_id)
                 
+                response_text = ""
+                is_error = False
+                error_detail = ""
+
                 if isinstance(parsed, dict):
                     response_text = parsed.get("text", "")
                     self.session_id = parsed.get("session_id")
-                    
-                    self._log(f"[AIAgent Response]:\n{response_text}")
-
-                    if parsed.get("is_error") or proc.returncode != 0:
-                        error_msg = (parsed.get("error_detail") or parsed.get("text") or "Process failed").replace("\n", " ")
-                        
-                        # Terminal gets a clean single-line error
-                        print(f"[AIAgent ERROR] {error_msg}")
-                        
-                        if attempt < max_retries - 1 and ("429" in error_msg or "capacity" in error_msg.lower()):
-                            wait_time = (attempt + 1) * 60
-                            print(f"[AIAgent RETRY] API congestion. Waiting {wait_time}s...")
-                            time.sleep(wait_time)
-                            if effective_guard: effective_guard.after()
-                            continue
-                        raise RuntimeError(f"LLM Agent Execution Failed: {error_msg}")
-
-                    response_text = parsed.get("text", "")
+                    is_error = parsed.get("is_error", False)
+                    error_detail = parsed.get("error_detail", "")
                 else:
                     response_text, self.session_id = parsed
-                    self._log(f"[AIAgent Response]:\n{response_text}")
+                    if proc.returncode != 0:
+                        is_error = True
+                        error_detail = full_stderr or full_stdout or "Process failed"
 
+                self._log(f"[AIAgent Response]:\n{response_text}")
+
+                if is_error or proc.returncode != 0:
+                    error_msg = (error_detail or response_text or "Process failed").replace("\n", " ")
+                    print(f"[AIAgent ERROR] {error_msg}")
+                    
+                    if attempt < max_retries - 1 and ("429" in error_msg or "capacity" in error_msg.lower() or "too many requests" in error_msg.lower()):
+                        wait_time = (attempt + 1) * 60
+                        print(f"[AIAgent RETRY] Waiting {wait_time}s...")
+                        time.sleep(wait_time)
+                        if effective_guard: effective_guard.after()
+                        continue
+                    raise RuntimeError(f"LLM Agent Execution Failed: {error_msg}")
+
+                # --- STEP 3: Guard After on Success ---
                 if effective_guard:
                     effective_guard.after()
                 return response_text
 
             except Exception as e:
+                if effective_guard: effective_guard.after()
                 if attempt < max_retries - 1 and ("429" in str(e) or "capacity" in str(e).lower()):
                     wait_time = (attempt + 1) * 60
                     print(f"\n[AIAgent RETRY] Exception ({e}). Waiting {wait_time}s...")

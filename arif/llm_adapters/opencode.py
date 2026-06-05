@@ -1,3 +1,4 @@
+import json
 from .base import BaseAdapter
 
 class OpenCodeAdapter(BaseAdapter):

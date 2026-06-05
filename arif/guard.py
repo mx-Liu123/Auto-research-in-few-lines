@@ -84,7 +84,10 @@ class Guard:
                     else:
                         shutil.rmtree(dst)
 
-                if os.path.isfile(src):
-                    shutil.copy2(src, dst)
+                if os.path.exists(src):
+                    if os.path.isfile(src):
+                        shutil.copy2(src, dst)
+                    else:
+                        shutil.copytree(src, dst)
                 else:
-                    shutil.copytree(src, dst)
+                    print(f"[Guard] Error: Source {src} not found. Cannot restore.")
