@@ -113,6 +113,6 @@ Special thanks to:
 * **Mr. Zhu** for providing computation resources
 
 This project was inspired by:
-* [AgentCommander](https://github.com/mx-Liu123/AgentCommander)
 * [autoresearch](https://github.com/karpathy/autoresearch) by Andrej Karpathy
 * [Auto-claude-code-research-in-sleep (ARIS ⚔️🌙)](https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep)
+* [AgentCommander](https://github.com/mx-Liu123/AgentCommander)
