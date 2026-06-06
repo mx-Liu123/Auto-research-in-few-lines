@@ -28,6 +28,9 @@ wheels/
 test_project/
 search_results.csv
 debug_output.txt
+**/arif_loop.py
+**/evaluator.py
+**/*.joblib
 
 # PBS Logs
 *.o[0-9]*
