@@ -65,7 +65,7 @@ from arif import AutoResearch, AIAgent
 
 def main():
     # --- Configuration ---
-    AGENT_TIMEOUT, CMD_TIMEOUT = None, 900 # No agent timeout, 15min for command (compilation takes time)
+    AGENT_TIMEOUT, CMD_TIMEOUT = 300, 900 # No agent timeout, 15min for command (compilation takes time)
     main_prompt = "This is a language model pretraining task on Climbmix-400B. The goal is to minimize val_bpb within a 300s budget on a 50M parameter model. Modify train.py to reduce val_bpb. The script must save the trained model weights to 'model.pth' before exiting. Focus on CWD and do not read or modify external files. Do not run the code ALWAYS, I will run for you."
     
     # 1. Initialize with Defaults and optional log_path
@@ -84,7 +84,7 @@ def main():
     for _ in range(20): # Run for 20 experiment iterations
         with ar.enter_exp(B, L, S): # Enter isolated workspace folder
             # 2. Simplified History Context (Directly as text)
-            history_text = ar.get_history(L=L, if_improved=False, limit=3, as_text=True) # Fetch lessons from failures
+            history_text = ar.get_history(B=B, L=L, if_improved=False, limit=3, as_text=True) # Fetch lessons from failures
 
             print(f"--- Experiment {B}.{L}.{S} ---")
             print("Generating experiment hypothesis...")

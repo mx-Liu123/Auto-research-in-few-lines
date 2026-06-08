@@ -31,8 +31,8 @@ debug_output.txt
 **/*.joblib
 
 # Tutorial specific (Ignore generated/run scripts while keeping source)
-example/tutorial/arif_loop.py
-example/tutorial/evaluator.py
+#example/tutorial/arif_loop.py
+#example/tutorial/evaluator.py
 
 # PBS Logs
 *.o[0-9]*

@@ -5,6 +5,9 @@ AIAgent module for executing LLM CLI commands with guard protection.
 import os
 import subprocess
 import time
+import sys
+import signal
+import threading
 
 from .llm_adapters import get_adapter
 
@@ -34,6 +37,10 @@ class AIAgent:
         - guard: If IndexError (default), use default_guard. If None, skip guard.
         - timeout: If IndexError (default), use default_timeout.
         """
+        import sys
+        import signal
+        import threading
+        
         # Resolve defaults: local override > global default
         effective_guard = self.default_guard if guard is IndexError else guard
         effective_timeout = self.default_timeout if timeout is IndexError else timeout
@@ -77,23 +84,29 @@ class AIAgent:
                 print(msg)
                 self._log(f"\n{msg}\nPROMPT: {full_prompt}")
 
-                proc = subprocess.Popen(cmd, stdin=subprocess.PIPE if stdin_input else None, **run_kwargs)
+                popen_kwargs = run_kwargs.copy()
+                if sys.platform != "win32":
+                    popen_kwargs["start_new_session"] = True
+                
+                proc = subprocess.Popen(cmd, stdin=subprocess.PIPE if stdin_input else None, **popen_kwargs)
 
                 stdout_chunks = []
                 stderr_chunks = []
 
-                import threading
                 def stream_reader(pipe, chunks, prefix):
                     while True:
-                        line = pipe.readline()
-                        if not line: break
-                        if isinstance(line, bytes):
-                            line = line.decode('utf-8', errors='replace')
-                        self._log(f"[{prefix}] {line.strip()}")
-                        chunks.append(line)
+                        try:
+                            line = pipe.readline()
+                            if not line: break
+                            if isinstance(line, bytes):
+                                line = line.decode('utf-8', errors='replace')
+                            self._log(f"[{prefix}] {line.strip()}")
+                            chunks.append(line)
+                        except Exception:
+                            break
 
-                t_out = threading.Thread(target=stream_reader, args=(proc.stdout, stdout_chunks, "LLM STDOUT"))
-                t_err = threading.Thread(target=stream_reader, args=(proc.stderr, stderr_chunks, "LLM STDERR"))
+                t_out = threading.Thread(target=stream_reader, args=(proc.stdout, stdout_chunks, "LLM STDOUT"), daemon=True)
+                t_err = threading.Thread(target=stream_reader, args=(proc.stderr, stderr_chunks, "LLM STDERR"), daemon=True)
                 t_out.start()
                 t_err.start()
 
@@ -106,14 +119,25 @@ class AIAgent:
                 try:
                     proc.wait(timeout=effective_timeout)
                 except subprocess.TimeoutExpired:
-                    proc.kill()
+                    if sys.platform != "win32":
+                        try:
+                            pgid = os.getpgid(proc.pid)
+                            os.killpg(pgid, signal.SIGKILL)
+                        except Exception:
+                            proc.kill()
+                    else:
+                        proc.kill()
                     timed_out = True
                     err_msg = f"[AIAgent WARNING] Execution timed out after {effective_timeout}s."
                     print(err_msg)
                     self._log(err_msg)
+                except BaseException as e:
+                    proc.kill()
+                    raise e
                 finally:
-                    t_out.join()
-                    t_err.join()
+                    # Join with a small timeout to avoid hanging if pipes are still open
+                    t_out.join(timeout=2)
+                    t_err.join(timeout=2)
 
                 if timed_out:
                     # Guard After must run even on timeout
@@ -155,7 +179,7 @@ class AIAgent:
                     print(f"[AIAgent ERROR] {error_msg}")
                     
                     if attempt < max_retries - 1 and ("429" in error_msg or "capacity" in error_msg.lower() or "too many requests" in error_msg.lower()):
-                        wait_time = (attempt + 1) * 60
+                        wait_time = (attempt + 1) * 5
                         print(f"[AIAgent RETRY] Waiting {wait_time}s...")
                         time.sleep(wait_time)
                         if effective_guard: effective_guard.after()
@@ -167,10 +191,12 @@ class AIAgent:
                     effective_guard.after()
                 return response_text
 
-            except Exception as e:
+            except BaseException as e:
                 if effective_guard: effective_guard.after()
+                if isinstance(e, KeyboardInterrupt):
+                    raise e
                 if attempt < max_retries - 1 and ("429" in str(e) or "capacity" in str(e).lower()):
-                    wait_time = (attempt + 1) * 60
+                    wait_time = (attempt + 1) * 5
                     print(f"\n[AIAgent RETRY] Exception ({e}). Waiting {wait_time}s...")
                     time.sleep(wait_time)
                     continue

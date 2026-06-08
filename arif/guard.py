@@ -25,7 +25,7 @@ class Guard:
         hashes = {}
         
         # Internal arif ignore list to prevent self-protection of workspaces or heavy git folders
-        ignores = {"agent_workspaces", ".git", "__pycache__", ".ipynb_checkpoints"}
+        ignores = {"agent_workspaces", "__pycache__"}
         if self.parent.log_path:
             ignores.add(os.path.basename(self.parent.log_path))
         
@@ -34,7 +34,8 @@ class Guard:
             if "*" in f:
                 # Expand glob pattern
                 matches = glob.glob(f)
-                expanded_files.extend([m for m in matches if m not in ignores])
+                # Ignore items in 'ignores' or starting with '.'
+                expanded_files.extend([m for m in matches if m not in ignores and not m.startswith(".")])
             else:
                 expanded_files.append(f)
 
@@ -74,20 +75,25 @@ class Guard:
         current_hashes = self._calculate_hashes()
         for f, h in self.hashes.items():
             if current_hashes.get(f) != h:
-                print(f"[Guard] Warning: {f} was modified! Restoring from project root.")
                 src = os.path.join(self.parent.project_root, f)
                 dst = os.path.join(os.getcwd(), f)
 
+                # CRITICAL: Prevent deleting the only copy if src and dst are the same
+                if os.path.abspath(src) == os.path.abspath(dst):
+                    continue
+
+                if not os.path.exists(src):
+                    print(f"[Guard] Error: Source {src} not found. Cannot restore {f}.")
+                    continue
+
+                print(f"[Guard] Warning: {f} was modified or deleted! Restoring from project root.")
                 if os.path.exists(dst):
                     if os.path.isfile(dst):
                         os.remove(dst)
                     else:
                         shutil.rmtree(dst)
 
-                if os.path.exists(src):
-                    if os.path.isfile(src):
-                        shutil.copy2(src, dst)
-                    else:
-                        shutil.copytree(src, dst)
+                if os.path.isfile(src):
+                    shutil.copy2(src, dst)
                 else:
-                    print(f"[Guard] Error: Source {src} not found. Cannot restore.")
+                    shutil.copytree(src, dst)

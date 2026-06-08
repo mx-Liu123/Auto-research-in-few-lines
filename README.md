@@ -1,6 +1,6 @@
 # Arif: Auto-Research In Few-lines
 
-This micro-engine allows you to build your own auto-research agent in just a few lines of Python by orchestrating your coding CLIs (Claude Code, Codex, Gemini CLI, etc.) and shell commands. Our to-do list includes enabling your high-level agent to use `arif` to autonomously construct and monitor its own research workflows.
+This micro-engine allows you to build your own auto-research agent in just a few lines of Python by orchestrating your coding CLIs (Claude Code, Codex, Gemini CLI, etc.) and shell commands. We have integrated the most essential and generic modules derived from my automated research experience. Our to-do list includes enabling your high-level agent to use `arif` to autonomously construct and monitor its own research workflows.
 
 ## Core Philosophy
 An auto-research is essentially an evolution tree, where each node is an experiment. In Arif, an experiments is organized into a isolated folder expB.L.S (Branch, Level, Step) recording its code and outputs:
@@ -18,6 +18,12 @@ agent_workspaces/
 - **Inter-Folder History Management**: One line to save history.json with customized keys or load them at another experiment folder.
 
 ![Core Functions](assets/core_functions_of_arif.png)
+
+## Basic Loop
+An implementation example of the optimization cycle [`example/basic_loop.py`](example/basic_loop.py).
+```bash
+python example/basic_loop.py
+```
 
 ## Installation
 
@@ -44,8 +50,7 @@ python3 tests/main_test.py --all --cli gemini claude qwen codex
 ---
 
 ## Quick Start
-
-Once installed, you can use **`arif_init.py`**, a bootstrap script that orchestrates Arif functions to automatically generate an evaluation judge and a research loop tailored to your specific task.
+Once installed, you can use **`arif_init.py`**, a bootstrap script that orchestrates Arif functions to automatically generate an evaluation judge and a research loop tailored to your specific task. To better understand the entire process from initialization to loop execution, we highly recommend checking out our interactive tutorial: **[Interactive Tutorial Notebook](example/tutorial/arif_tutorial.ipynb)**.
 
 ```bash
 # 1. Copy the initialization script and agent guidelines to your project
@@ -100,14 +105,6 @@ Parameter Descriptions:
  - Uses MD5 hashing to snapshot protected files (including directories) before LLM operations.
  - Automatically detects changes and restores files from the `project_root` if tampering is detected.
 
-
-## Examples
-
-### Basic Loop
-A minimal implementation of the optimization cycle.
-```bash
-python example/basic_loop.py
-```
 
 ### Diabetes Model Optimization
 A complete example that optimizes a scikit-learn model using the diabetes dataset.

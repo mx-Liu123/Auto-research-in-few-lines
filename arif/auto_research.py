@@ -7,6 +7,9 @@ import json
 import os
 import shutil
 import subprocess
+import sys
+import signal
+import time
 
 from .guard import Guard
 
@@ -194,63 +197,81 @@ class AutoResearch:
         if_improved = False
         final_stdout, final_stderr = "", ""
 
+        # Use agent's guard to protect files during the entire loop if available
+        guard = getattr(agent, "default_guard", None)
+
         for trial in range(1, max_trials + 1):
-            prompt = modify_prompt
-            if trial > 1:
-                feedback = f"\n\n[RETRY FEEDBACK] Your previous attempt(s) failed. Here is the execution history:\n"
-                for i, h in enumerate(trials_history):
-                    feedback += f"--- Trial {i+1} ---\nSTDOUT:\n{h['stdout']}\nSTDERR:\n{h['stderr']}\n"
-                feedback += "\nPlease analyze these results and try a different approach to improve the metric."
-                prompt += feedback
+            if guard: guard.before()
+            try:
+                prompt = modify_prompt
+                if trial > 1:
+                    feedback = f"\n\n[RETRY FEEDBACK] Your previous attempt(s) failed. Here is the execution history:\n"
+                    for i, h in enumerate(trials_history):
+                        feedback += f"--- Trial {i+1} ---\nSTDOUT:\n{h['stdout']}\nSTDERR:\n{h['stderr']}\n"
+                    feedback += "\nPlease analyze these results and try a different approach to improve the metric."
+                    prompt += feedback
 
-            print(f"  Trial {trial}/{max_trials}: Modifying code...")
-            # agent.ask will use its defaults
-            agent.ask(prompt)
+                print(f"  Trial {trial}/{max_trials}: Modifying code...")
+                # Disable internal guard in ask() since we handle it here for the whole trial
+                agent.ask(prompt, guard=None)
 
-            print(f"  Trial {trial}/{max_trials}: Running evaluation...")
-            status, stdout, stderr = self.run_cmd(eval_cmd, timeout=timeout)
-            
-            # Extract metric (handling optional sign and decimals)
-            # No assumptions: user must provide the exact prefix (including colons/spaces) in metric_extract
-            pattern = rf"{metric_extract}([-+]?[0-9]*\.?[0-9]+)"
-            match = re.search(pattern, stdout, re.IGNORECASE)
-            current_metric = float(match.group(1)) if match else float("inf")
-            
-            trials_history.append({"stdout": stdout, "stderr": stderr, "metric": current_metric})
-            final_stdout, final_stderr = stdout, stderr
+                print(f"  Trial {trial}/{max_trials}: Running evaluation...")
+                status, stdout, stderr = self.run_cmd(eval_cmd, timeout=timeout)
+                
+                # Extract metric (handling optional sign and decimals)
+                # No assumptions: user must provide the exact prefix (including colons/spaces) in metric_extract
+                pattern = rf"{metric_extract}([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)"
+                match = re.search(pattern, stdout, re.IGNORECASE)
+                current_metric = float(match.group(1)) if match else float("inf")
+                
+                trials_history.append({"stdout": stdout, "stderr": stderr, "metric": current_metric})
+                final_stdout, final_stderr = stdout, stderr
 
-            print(f"  Current {metric_extract}: {current_metric:.4f} (Best: {best_metric:.4f})")
+                print(f"  Current {metric_extract}: {current_metric:.4f} (Best: {best_metric:.4f})")
 
-            if smaller_is_better:
-                if_improved = current_metric < best_metric
-            else:
-                if_improved = current_metric > best_metric
-            if if_improved:
-                print(f"  SUCCESS: Improved from {best_metric:.4f} to {current_metric:.4f}!")
-                break
-            else:
-                print(f"  No improvement.")
+                if smaller_is_better:
+                    if_improved = current_metric < best_metric
+                else:
+                    if_improved = current_metric > best_metric
+                if if_improved:
+                    print(f"  SUCCESS: Improved from {best_metric:.4f} to {current_metric:.4f}!")
+                    break
+                else:
+                    print(f"  No improvement.")
+            finally:
+                if guard: guard.after()
 
         return if_improved, current_metric, final_stdout, final_stderr
 
     def run_cmd(self, cmd, timeout=None):
+        import sys
+        import signal
+        import time
         with open("stdout.log", "w") as f_out, open("stderr.log", "w") as f_err:
-            proc = subprocess.Popen(
-                cmd,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
+            popen_kwargs = {
+                "shell": True,
+                "stdout": subprocess.PIPE,
+                "stderr": subprocess.PIPE,
+                "text": True,
+            }
+            if sys.platform != "win32":
+                popen_kwargs["start_new_session"] = True
+
+            proc = subprocess.Popen(cmd, **popen_kwargs)
             out_chunks, err_chunks = [], []
-            import time
             start_time = time.time()
             
             try:
                 while True:
                     # Check timeout manually if provided
                     if timeout and (time.time() - start_time) > timeout:
-                        proc.kill()
+                        if sys.platform != "win32":
+                            try:
+                                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                            except Exception:
+                                proc.kill()
+                        else:
+                            proc.kill()
                         raise subprocess.TimeoutExpired(cmd, timeout)
 
                     # We use a small sleep to avoid busy waiting and allow pipes to fill
@@ -258,8 +279,8 @@ class AutoResearch:
                     
                     # Read available output
                     while True:
-                        import select, sys
                         # Use select for non-blocking check on Unix, skip on Windows to avoid crash
+                        import select
                         ready = select.select([proc.stdout, proc.stderr], [], [], 0)[0] if sys.platform != 'win32' else []
                         out = proc.stdout.readline() if proc.stdout in ready else None
                         err = proc.stderr.readline() if proc.stderr in ready else None                        
@@ -276,14 +297,26 @@ class AutoResearch:
                     if proc.poll() is not None:
                         break
             except subprocess.TimeoutExpired:
-                proc.kill()
+                if sys.platform != "win32":
+                    try:
+                        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                    except Exception:
+                        proc.kill()
+                else:
+                    proc.kill()
                 err_msg = f"TIMEOUT_ERROR: Command timed out after {timeout}s"
                 print(f"[AutoResearch WARNING] {err_msg}")
                 self._log(f"[AutoResearch WARNING] {err_msg}")
                 f_err.write(err_msg)
                 return 124, "".join(out_chunks), "".join(err_chunks) + "\n" + err_msg
             except Exception as e:
-                proc.kill()
+                if sys.platform != "win32":
+                    try:
+                        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                    except Exception:
+                        proc.kill()
+                else:
+                    proc.kill()
                 err_msg = f"Command failed: {str(e)}"
                 print(f"[AutoResearch ERROR] {err_msg}")
                 self._log(f"[AutoResearch ERROR] {err_msg}")
@@ -307,7 +340,8 @@ class AutoResearch:
             shutil.rmtree(dst)
 
         def ignore_func(directory, contents):
-            return ["agent_workspaces", ".git", "__pycache__", ".ipynb_checkpoints"]
+            # Ignore agent_workspaces, __pycache__, and all dot-files/dirs
+            return [c for c in contents if c == "agent_workspaces" or c == "__pycache__" or c.startswith(".")]
 
         shutil.copytree(self.project_root, dst, ignore=ignore_func)
 

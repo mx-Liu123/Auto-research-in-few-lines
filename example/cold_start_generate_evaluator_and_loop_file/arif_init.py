@@ -7,7 +7,7 @@ import argparse
 from arif import AIAgent, AutoResearch
 
 # --- Default Configurations ---
-DEFAULT_TASK_BACKGROUND = 'This is a language model pretraining task on Climbmix-400B.'
+DEFAULT_TASK_BACKGROUND = 'This is a language model pretraining task on Climbmix-400B. Goal: minimize val_bpb within 300s.'
 DEFAULT_LOOP_IDEA = 'Basically follows Standard Code Pattern in @README_for_agent.md'
 DEFAULT_METRIC_PROMPT = "evaluator.py metric use val_bpb"
 DEFAULT_HOW_TO_RUN = "uv run train.py"
@@ -40,7 +40,7 @@ def run_diagnostic(cmd, key, timeout):
         output = proc.stdout + proc.stderr
         
         # Check metric capture with flexible whitespace
-        pattern = rf"{re.escape(key)}\s*([-+]?[0-9]*\.?[0-9]+)"
+        pattern = rf"{re.escape(key)}\s*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)"
         match = re.search(pattern, output, re.IGNORECASE)
         
         if match:
@@ -74,7 +74,8 @@ def main():
     max_retry = args.max_retry
     cli_type = args.cli_type
 
-    EVAL_CMD = f"{HOW_TO_RUN_YOUR_CODE} && uv run python {EVAL_SCRIPT}"
+    # The user now provides the FULL command including the evaluator run logic
+    EVAL_CMD = HOW_TO_RUN_YOUR_CODE
 
     # 1. formatted contract and combine with task_background
     formatted_contract = FRAMEWORK_CONTRACT_TEMPLATE.format(
@@ -83,6 +84,7 @@ def main():
         timeout=DIAGNOSTIC_TIMEOUT,
         prefix=METRIC_PREFIX
     )
+    task_background += f"\n\n[EXECUTION COMMAND]\nThe project will be evaluated using this EXACT command: {EVAL_CMD}\n"
     task_background += "\n\n" + formatted_contract
 
     # Initialize AutoResearch to provide guard functionality and logging
@@ -93,20 +95,23 @@ def main():
         engine=cli_type,
         system_prompt=(
             "You are a research automation expert for the 'arif' library @README_for_agent.md. "
-            "You are helping users to build the loop code and evaluator. Don't run code, just modify."
+            "You are helping users to build the loop code and evaluator. Don't run code, just modify. "
+            f"Note: The user has already decided the execution command: '{EVAL_CMD}'. "
+            "You must ensure that any files you create (like evaluator.py) work perfectly with this command."
         ),
         default_guard=ar.guard,
         log_path=LOG_PATH
     )
 
     # reviewer_agent: Review setup_agent's work
-    # Note: protected_files=["*"] ensures reviewer doesn't modify anything
     reviewer_ar = AutoResearch(project_root="./", protected_files=["*"], log_path=LOG_PATH)
     reviewer_agent = AIAgent(
         engine=cli_type,
         system_prompt=(
             "You are a research automation expert for the 'arif' library @README_for_agent.md. "
-            "You are reviewing another agent's work about helping users to build the loop code and evaluator."
+            "You are reviewing another agent's work about helping users to build the loop code and evaluator. "
+            f"The user has decided the execution command is: '{EVAL_CMD}'. "
+            "Verify that the setup agent's work is compatible with this command."
         ),
         default_guard=reviewer_ar.guard,
         log_path=LOG_PATH
@@ -116,9 +121,9 @@ def main():
     print("\n[Step 1] Setup Agent is building evaluator.py...")
     ans1 = setup_agent.ask(
         task_background + 
-        '. Now build an evaluator (make main script can Output Artifact and evaluator script can load the Output Artifact) that can evaluate the result of ' + HOW_TO_RUN_YOUR_CODE + 
+        f'. Now build an evaluator (make main script can Output Artifact and evaluator script can load the Output Artifact) that works with the command: {EVAL_CMD}. ' +
         ' metric prompt: ' + METRIC_prompt + 
-        f'. It should print out metric explicitly like {METRIC_PREFIX} 123).'
+        f'. It should print out metric explicitly like {METRIC_PREFIX} 123). Evaluator is a judge. Try to make data loading or interfaces not special, as it might constrain the freedom of player.'
     )
     print(f"Agent response length: {len(ans1)}")
 
@@ -126,7 +131,8 @@ def main():
     print("\n[Step 2] Setup Agent is generating arif_loop.py...")
     ans2 = setup_agent.ask(
         task_background + '\n' + your_idea_about_loop + 
-        '. Now generate and create ./arif_loop.py based on user\'s prompt, make sure metric prefix is filled correctly,decide ar.modify_and_run_loop(..., smaller_is_better=True/False) by yourself'
+        f'. Now generate and create ./arif_loop.py. USE THIS EXACT COMMAND for eval_cmd: "{EVAL_CMD}". ' +
+        f'Make sure metric prefix is filled correctly as {METRIC_PREFIX}, decide ar.modify_and_run_loop(..., smaller_is_better=True/False) by yourself. In loop main prompt, let agent know never run the code, instead, let me run it.'
     )
     print(f"Agent response length: {len(ans2)}")
 
@@ -160,6 +166,18 @@ def main():
         is_pass, stdout, stderr = run_diagnostic(EVAL_CMD, METRIC_PREFIX, DIAGNOSTIC_TIMEOUT)
 
     if is_pass:
+        print("\n[Step 7] Setup Agent is summarizing the initialization process...")
+        summary_ans = setup_agent.ask(
+            "Everything has finished running successfully. Please provide a detailed summary of: "
+            "1. What modifications you made to the source code, including the specific locations of the modifications. "
+            "2. How the evaluator (evaluator.py) is designed in detail (e.g., how to load data, interfaces). "
+            "3. How the research loop (arif_loop.py) is designed."
+        )
+        print(f"Summary response length: {len(summary_ans)}")
+        print("\n=== Agent Summary ===")
+        print(summary_ans)
+        print("=====================\n")
+
         print("\n" + "="*50)
         print(" [READY] Initialization successful!")
         print(" 1. Review 'evaluator.py' and 'arif_loop.py'")
