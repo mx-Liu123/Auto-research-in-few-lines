@@ -16,14 +16,9 @@ agent_workspaces/
 ## Features
 - **CLI Based**: Directly pass your prompt to your CLI, utilizing its intra-folder context management, tools and online search.
 - **Inter-Folder History Management**: One line to save history.json with customized keys or load them at another experiment folder.
+- **Intuitive loop**: An implementation example of the optimization cycle [`example/basic_loop.py`](example/basic_loop.py).
 
 ![Core Functions](assets/core_functions_of_arif.png)
-
-## Basic Loop
-An implementation example of the optimization cycle [`example/basic_loop.py`](example/basic_loop.py).
-```bash
-python example/basic_loop.py
-```
 
 ## Installation
 
