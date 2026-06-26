@@ -120,4 +120,3 @@ if __name__ == "__main__":
 - **Atomic Edits**: Focus on one change per experiment.
 - **Multi-Agent Collaboration**: Use the Reviewer's feedback to avoid repetitive mistakes, inspect outputs/plots, improve prompts, and look for "cheating" patterns.
 - **Log Management**: pass the same `log_path` to `AutoResearch` and every `AIAgent` so all LLM prompts, raw CLI output, and parsed responses are auditable.
-- **Environment Verification**: Always verify the evaluator runs correctly in the baseline (`expB.0.0`) before starting a long loop.

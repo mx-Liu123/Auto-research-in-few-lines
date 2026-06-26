@@ -3,24 +3,36 @@ from .base import BaseAdapter
 
 class GeminiAdapter(BaseAdapter):
     def build_command(self, prompt, session_id, model, yolo, **kwargs):
-        cmd = ["gemini", "-o", "stream-json", "--skip-trust"]
-        
-        # Explicitly use -p - to read prompt from stdin
-        cmd.extend(["-p", "-"])
+        # cmd = ["gemini", "-o", "stream-json", "--skip-trust"]
+        # 
+        # # Explicitly use -p - to read prompt from stdin
+        # cmd.extend(["-p", "-"])
+        cmd = ["agy", "--print"]
 
+        # if model and model != "gemini" and not model.startswith("auto-gemini"):
+        #      cmd.extend(["-m", model])
+        # elif model and model.startswith("auto-gemini"):
+        #      cmd.extend(["-m", model])
         if model and model != "gemini" and not model.startswith("auto-gemini"):
-             cmd.extend(["-m", model])
+             cmd.extend(["--model", model])
         elif model and model.startswith("auto-gemini"):
-             cmd.extend(["-m", model])
+             cmd.extend(["--model", model])
             
+        # if session_id:
+        #     if session_id == "AUTO_RESUME":
+        #         cmd.extend(["--resume", "latest"])
+        #     else:
+        #         cmd.extend(["--resume", session_id])
         if session_id:
             if session_id == "AUTO_RESUME":
-                cmd.extend(["--resume", "latest"])
+                cmd.append("--continue")
             else:
-                cmd.extend(["--resume", session_id])
+                cmd.extend(["--conversation", session_id])
                 
+        # if yolo:
+        #     cmd.append("-y")
         if yolo:
-            cmd.append("-y")
+            cmd.append("--dangerously-skip-permissions")
             
         return cmd
 
@@ -54,5 +66,9 @@ class GeminiAdapter(BaseAdapter):
 
         if not new_session_id and original_session_id:
             new_session_id = original_session_id
+
+        # If JSON parsing failed or yielded empty, fallback to raw stdout
+        if not full_response.strip():
+            full_response = stdout
 
         return full_response.strip(), new_session_id

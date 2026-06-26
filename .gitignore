@@ -40,7 +40,7 @@ debug_output.txt
 
 # Environments
 .env
-.venv
+**/.venv/
 venv/
 ENV/
 

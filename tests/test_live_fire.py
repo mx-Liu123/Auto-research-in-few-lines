@@ -43,7 +43,8 @@ def run_live_fire_test(clis=None):
     os.chdir(active_workspace)
     
     if clis is None:
-        clis = ["gemini", "claude", "qwen", "codex"]
+        # clis = ["gemini", "claude", "qwen", "codex", "hermes"]
+        clis = ["agy", "claude", "qwen", "codex", "hermes"]
         
     prompt = (
         f"STRICT INSTRUCTION: You are in a restricted test environment. "

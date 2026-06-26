@@ -24,7 +24,8 @@ class TestAIAgent(unittest.TestCase):
         mock_proc.wait.return_value = None
         mock_popen.return_value = mock_proc
 
-        agent = AIAgent(engine="gemini", log_path=self.log_path)
+        # agent = AIAgent(engine="gemini", log_path=self.log_path)
+        agent = AIAgent(engine="agy", log_path=self.log_path)
         response = agent.ask("Hi")
 
         self.assertEqual(response, "Hello world")
@@ -47,7 +48,8 @@ class TestAIAgent(unittest.TestCase):
 
         mock_popen.side_effect = [mock_proc_fail, mock_proc_ok]
 
-        agent = AIAgent(engine="gemini")
+        # agent = AIAgent(engine="gemini")
+        agent = AIAgent(engine="agy")
         with patch("arif.agent.time.sleep") as mock_sleep:
             response = agent.ask("Hi")
         
@@ -65,7 +67,8 @@ class TestAIAgent(unittest.TestCase):
         mock_proc.wait.side_effect = subprocess.TimeoutExpired(cmd="test", timeout=0.1)
         mock_popen.return_value = mock_proc
 
-        agent = AIAgent(engine="gemini", default_timeout=0.1)
+        # agent = AIAgent(engine="gemini", default_timeout=0.1)
+        agent = AIAgent(engine="agy", default_timeout=0.1)
         response = agent.ask("Hi")
         
         self.assertTrue("TIMEOUT_ERROR" in response)
