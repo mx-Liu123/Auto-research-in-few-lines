@@ -10,7 +10,8 @@ def main():
     log_name = "arif_LLM_response.log" # Log saved inside each exp folder
     ar = AutoResearch(project_root="./", protected_files=["evaluator.py", "evaluator_lib/"], log_path=log_name) # Initialize with protection
     agent = AIAgent(
-        engine="claude", # Use Claude engine
+        engine="agy", # Use agy engine
+        model="Gemini 3.5 Flash (Low)", # Model name passed to --model
         system_prompt=main_prompt, # Set global task instructions
         default_guard=ar.guard, # Enable file modification guard
         default_timeout=AGENT_TIMEOUT, # Global timeout for LLM calls
