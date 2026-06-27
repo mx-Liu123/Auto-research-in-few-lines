@@ -3,7 +3,8 @@ from arif import AutoResearch, AIAgent
 
 def main():
     # --- Configuration ---
-    AGENT_TIMEOUT, CMD_TIMEOUT = None, 600
+    # AGENT_TIMEOUT, CMD_TIMEOUT = None, 600
+    AGENT_TIMEOUT, CMD_TIMEOUT = 300, 900
     main_prompt = (
         "This is a machine learning project. You need to modify strategy.py to reduce Loss (MSE). "
         "Focus on CWD and do not modify external files. Do not modify evaluator.py."
@@ -16,7 +17,8 @@ def main():
     
     # 1. Initialize Agent with global defaults
     agent = AIAgent(
-        engine="gemini", 
+        # engine="gemini", 
+        engine="agy", 
         system_prompt=main_prompt, 
         default_guard=ar.guard, 
         default_timeout=AGENT_TIMEOUT,

@@ -13,7 +13,8 @@ DEFAULT_METRIC_PROMPT = "evaluator.py metric use val_bpb"
 DEFAULT_HOW_TO_RUN = "uv run train.py"
 DEFAULT_TIMEOUT = 900
 DEFAULT_RETRY = 5
-DEFAULT_CLI_TYPE = "gemini"
+# DEFAULT_CLI_TYPE = "gemini"
+DEFAULT_CLI_TYPE = "agy"
 
 METRIC_PREFIX = "evaluator_metric:"
 EVAL_SCRIPT = "evaluator.py"

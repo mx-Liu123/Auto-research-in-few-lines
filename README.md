@@ -1,6 +1,7 @@
 # Arif: Auto-Research In Few-lines
 
-This micro-engine allows you to build your own auto-research agent in just a few lines of Python by orchestrating your coding CLIs (Claude Code, Codex, Gemini CLI, etc.) and shell commands. We have integrated the most essential and generic modules derived from my automated research experience. Our to-do list includes enabling your high-level agent to use `arif` to autonomously construct and monitor its own research workflows.
+<!-- This micro-engine allows you to build your own auto-research agent in just a few lines of Python by orchestrating your coding CLIs (Claude Code, Codex, Gemini CLI, etc.) and shell commands. We have integrated the most essential and generic modules derived from my automated research experience. Our to-do list includes enabling your high-level agent to use `arif` to autonomously construct and monitor its own research workflows. -->
+This micro-engine allows you to build your own auto-research agent in just a few lines of Python by orchestrating your coding CLIs (Claude Code, Codex, agy CLI, etc.) and shell commands. We have integrated the most essential and generic modules derived from my automated research experience. Our to-do list includes enabling your high-level agent to use `arif` to autonomously construct and monitor its own research workflows.
 
 ## Core Philosophy
 An auto-research is essentially an evolution tree, where each node is an experiment. In Arif, an experiments is organized into a isolated folder expB.L.S (Branch, Level, Step) recording its code and outputs:
@@ -39,7 +40,8 @@ Before starting your research, it is highly recommended to verify your local env
 python3 tests/main_test.py --all
 
 # Or run tests for specific CLIs only
-python3 tests/main_test.py --all --cli gemini claude qwen codex
+# python3 tests/main_test.py --all --cli gemini claude qwen codex
+python3 tests/main_test.py --all --cli agy claude qwen codex
 ```
 
 ---
@@ -59,7 +61,8 @@ python arif_init.py \
   --HOW_TO_RUN_YOUR_CODE "uv run train.py" \
   --DIAGNOSTIC_TIMEOUT 900 \
   --max_retry 5 \
-  --cli_type "gemini"
+  # --cli_type "gemini"
+  --cli_type "agy"
 ```
 
 
@@ -70,7 +73,8 @@ Parameter Descriptions:
  * `--HOW_TO_RUN_YOUR_CODE`: The command to run your original training code.
  * `--DIAGNOSTIC_TIMEOUT`: Maximum wait time (in seconds) for the diagnostic run. Recommended: training time + compilation overhead.
  * `--max_retry`: Maximum number of retries when automatically generating the evaluator and loop scripts.
- * `--cli_type`: The model engine type to use (default is `gemini`). Supported engines include: `claude`, `codex`, `gemini`, `qwen`.
+<!--  * `--cli_type`: The model engine type to use (default is `gemini`). Supported engines include: `claude`, `codex`, `gemini`, `qwen`. -->
+ * `--cli_type`: The model engine type to use (default is `agy`). Supported engines include: `claude`, `codex`, `agy`, `qwen`.
 
  After the script finishes, it will generate the following components:
  * **`evaluator.py`**: An independent, anti-cheating judge that extracts metrics from your project's output artifacts (model weights etc).
@@ -85,7 +89,8 @@ Parameter Descriptions:
  A wrapper for LLM CLI tools with persistent context and retry logic.
  - `__init__(engine: str, model: str | None, delay: int, system_prompt: str, default_guard: any, default_timeout: int | None, log_path: str | None)`: Set global defaults.
  - `ask(prompt, guard, timeout, new_session, model, ...)`: Executes an LLM call with optional local overrides. Automatically handles rate limits and session persistence.
- - Supported adapters: Gemini, Qwen, Claude, and Codex CLI.
+<!--  - Supported adapters: Gemini, Qwen, Claude, and Codex CLI. -->
+ - Supported adapters: agy, Qwen, Claude, and Codex CLI.
 
  ### AutoResearch
  Handles the experiment lifecycle, workspace isolation, and history management.

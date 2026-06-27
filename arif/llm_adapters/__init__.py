@@ -38,5 +38,8 @@ def get_adapter(model_name):
     if model_name.startswith("hermes"):
         return HermesAdapter()
         
-    # Default fallback (Gemini)
+    if model_name.startswith("agy") or model_name == "agy":
+        return GeminiAdapter()
+        
+    # Default fallback (agy) (Old: Gemini)
     return GeminiAdapter()

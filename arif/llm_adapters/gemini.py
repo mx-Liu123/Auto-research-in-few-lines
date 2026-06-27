@@ -13,9 +13,13 @@ class GeminiAdapter(BaseAdapter):
         #      cmd.extend(["-m", model])
         # elif model and model.startswith("auto-gemini"):
         #      cmd.extend(["-m", model])
-        if model and model != "gemini" and not model.startswith("auto-gemini"):
+        # if model and model != "gemini" and not model.startswith("auto-gemini"):
+        #      cmd.extend(["--model", model])
+        # elif model and model.startswith("auto-gemini"):
+        #      cmd.extend(["--model", model])
+        if model and model != "agy" and not model.startswith("auto-agy"):
              cmd.extend(["--model", model])
-        elif model and model.startswith("auto-gemini"):
+        elif model and model.startswith("auto-agy"):
              cmd.extend(["--model", model])
             
         # if session_id:

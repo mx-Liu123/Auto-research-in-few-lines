@@ -32,7 +32,8 @@ def main():
     
     # Initialize the AIAgent with the task instructions
     agent = AIAgent(
-        engine="gemini", 
+        # engine="gemini", 
+        engine="agy", 
         system_prompt=main_prompt,
         default_guard=ar.guard,
         default_timeout=AGENT_TIMEOUT,

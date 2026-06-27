@@ -8,9 +8,10 @@ def main():
     # Global Baseline Control
     BASELINE_UNFINISHED_COUNT = 4.057084139683834
     
-    # PBS walltime is 30m, so we wait up to 40m for safety
-    AGENT_TIMEOUT = 600  # 10 minutes for the agent
-    CMD_TIMEOUT = 9000   # 2.5 hours for the PBS job
+    # AGENT_TIMEOUT = 600  # 10 minutes for the agent
+    # CMD_TIMEOUT = 9000   # 2.5 hours for the PBS job
+    AGENT_TIMEOUT = 300
+    CMD_TIMEOUT = 900
     
     # Project Root and Protected Files
     log_name = "arif_LLM_response.log"
@@ -57,9 +58,10 @@ def main():
         "11. Refer to the source code in 'parismc/' for algorithm details if needed.\n"
     )
 
-    # Initialize Agent with Gemini
+    # Initialize Agent with agy
     agent = AIAgent(
-        engine="gemini", 
+        # engine="gemini", 
+        engine="agy", 
         delay=60,
         system_prompt=main_prompt,
         default_guard=ar.guard,

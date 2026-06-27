@@ -2,7 +2,8 @@ from arif import AutoResearch, AIAgent
 
 def main():
     # --- Configuration ---
-    AGENT_TIMEOUT, CMD_TIMEOUT = None, 600 # No agent timeout, 10min for command
+    # AGENT_TIMEOUT, CMD_TIMEOUT = None, 600 # No agent timeout, 10min for command
+    AGENT_TIMEOUT, CMD_TIMEOUT = 300, 900
     main_prompt = "This is a machine learning project. Modify train.py to reduce loss. Focus on CWD  and do not read or modify external files. Do not run the code ALWAYS, I will run for you."
     
     # 1. Initialize with Defaults and optional log_path
