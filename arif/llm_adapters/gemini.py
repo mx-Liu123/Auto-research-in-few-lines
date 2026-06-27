@@ -49,6 +49,8 @@ class GeminiAdapter(BaseAdapter):
             if not line: continue
             try:
                 event = json.loads(line)
+                if not isinstance(event, dict):
+                    continue
                 event_type = event.get("type")
                 
                 if event_type == "init":
