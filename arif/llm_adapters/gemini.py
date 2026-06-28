@@ -43,6 +43,7 @@ class GeminiAdapter(BaseAdapter):
     def parse_output(self, stdout, original_session_id):
         new_session_id = None
         full_response = ""
+        is_json_stream = False
         
         for line in stdout.splitlines():
             line = line.strip()
@@ -51,6 +52,7 @@ class GeminiAdapter(BaseAdapter):
                 event = json.loads(line)
                 if not isinstance(event, dict):
                     continue
+                is_json_stream = True
                 event_type = event.get("type")
                 
                 if event_type == "init":
@@ -73,8 +75,9 @@ class GeminiAdapter(BaseAdapter):
         if not new_session_id and original_session_id:
             new_session_id = original_session_id
 
-        # If JSON parsing failed or yielded empty, fallback to raw stdout
-        if not full_response.strip():
+        # if not full_response.strip():
+        #     full_response = stdout
+        if not is_json_stream or not full_response.strip():
             full_response = stdout
 
         return full_response.strip(), new_session_id
