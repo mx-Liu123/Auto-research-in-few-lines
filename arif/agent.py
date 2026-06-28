@@ -174,8 +174,10 @@ class AIAgent:
 
                 self._log(f"[AIAgent Response]:\n{response_text}")
 
-                if is_error or proc.returncode != 0:
-                    error_msg = (error_detail or response_text or "Process failed").replace("\n", " ")
+                # if is_error or proc.returncode != 0:
+                #     error_msg = (error_detail or response_text or "Process failed").replace("\n", " ")
+                if is_error or proc.returncode != 0 or not response_text.strip():
+                    error_msg = (error_detail or response_text or "Empty response from Agent").replace("\n", " ")
                     print(f"[AIAgent ERROR] {error_msg}")
                     
                     if attempt < max_retries - 1 and ("429" in error_msg or "capacity" in error_msg.lower() or "too many requests" in error_msg.lower()):
