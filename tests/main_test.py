@@ -12,6 +12,11 @@ try:
 except ImportError:
     from .test_live_fire import run_live_fire_test
 
+try:
+    from test_session_recovery import run_session_recovery_test
+except ImportError:
+    from .test_session_recovery import run_session_recovery_test
+
 def run_unit_tests():
     print("\n" + "="*20 + " RUNNING UNIT TESTS " + "="*20)
     test_dir = os.path.dirname(__file__)
@@ -44,10 +49,21 @@ def main():
 
     if args.live or args.all:
         print("\n" + "="*20 + " RUNNING LIVE-FIRE TESTS " + "="*20)
+        # try:
+        #     run_live_fire_test(clis=args.cli)
+        # except Exception as e:
+        #     print(f"Live-fire test suite failed: {e}")
+        #     success = False
         try:
             run_live_fire_test(clis=args.cli)
         except Exception as e:
             print(f"Live-fire test suite failed: {e}")
+            success = False
+
+        try:
+            run_session_recovery_test(clis=args.cli)
+        except Exception as e:
+            print(f"Session recovery test suite failed: {e}")
             success = False
 
     if not success:

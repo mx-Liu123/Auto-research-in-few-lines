@@ -155,7 +155,8 @@ class AIAgent:
                         if effective_guard: effective_guard.after()
                         continue
 
-                parsed = current_adapter.parse_output(full_stdout, self.session_id)
+                # parsed = current_adapter.parse_output(full_stdout, self.session_id)
+                parsed = current_adapter.parse_output(full_stdout + "\n" + full_stderr, self.session_id)
                 
                 response_text = ""
                 is_error = False

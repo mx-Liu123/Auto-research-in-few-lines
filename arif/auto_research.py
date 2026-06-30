@@ -40,10 +40,17 @@ class AutoResearch:
         baseline_dir = os.path.join(branch_dir, f"exp{B}.0.0")
         self._copy_project_to(baseline_dir)
 
-        with open(os.path.join(baseline_dir, "history.json"), "w") as f:
+        # with open(os.path.join(baseline_dir, "history.json"), "w") as f:
+        #     json.dump(
+        #         {"B": B, "L": 0, "S": 0, "if_improved": True, "note": "Initial baseline"},
+        #         f,
+        #     )
+        with open(os.path.join(baseline_dir, "history.json"), "w", encoding="utf-8") as f:
             json.dump(
                 {"B": B, "L": 0, "S": 0, "if_improved": True, "note": "Initial baseline"},
                 f,
+                indent=4,
+                ensure_ascii=False,
             )
 
         return B, 1, 1
@@ -332,8 +339,10 @@ class AutoResearch:
         h_path = os.path.join(self.current_exp_dir, "history.json")
         data = self.current_metadata.copy()
         data.update(kwargs)
-        with open(h_path, "w") as f:
-            json.dump(data, f, indent=4)
+        # with open(h_path, "w") as f:
+        #     json.dump(data, f, indent=4)
+        with open(h_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
 
     def _copy_project_to(self, dst):
         if os.path.exists(dst):

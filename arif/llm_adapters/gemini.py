@@ -7,7 +7,8 @@ class GeminiAdapter(BaseAdapter):
         # 
         # # Explicitly use -p - to read prompt from stdin
         # cmd.extend(["-p", "-"])
-        cmd = ["agy", "--print"]
+        # cmd = ["agy", "--print"]
+        cmd = ["agy", "-p", prompt]
 
         # if model and model != "gemini" and not model.startswith("auto-gemini"):
         #      cmd.extend(["-m", model])
@@ -27,11 +28,13 @@ class GeminiAdapter(BaseAdapter):
         #         cmd.extend(["--resume", "latest"])
         #     else:
         #         cmd.extend(["--resume", session_id])
+        # if session_id:
+        #     if session_id == "AUTO_RESUME":
+        #         cmd.append("--continue")
+        #     else:
+        #         cmd.extend(["--conversation", session_id])
         if session_id:
-            if session_id == "AUTO_RESUME":
-                cmd.append("--continue")
-            else:
-                cmd.extend(["--conversation", session_id])
+            cmd.append("--continue")
                 
         # if yolo:
         #     cmd.append("-y")
@@ -39,6 +42,15 @@ class GeminiAdapter(BaseAdapter):
             cmd.append("--dangerously-skip-permissions")
             
         return cmd
+
+    def get_run_kwargs(self, prompt, env):
+        # We explicitly set input to None since prompt is passed via command line argument -p
+        return {
+            "capture_output": True,
+            "text": True,
+            "env": env,
+            "input": None
+        }
 
     def parse_output(self, stdout, original_session_id):
         new_session_id = None
@@ -72,8 +84,10 @@ class GeminiAdapter(BaseAdapter):
             except json.JSONDecodeError:
                 pass
 
-        if not new_session_id and original_session_id:
-            new_session_id = original_session_id
+        # if not new_session_id and original_session_id:
+        #     new_session_id = original_session_id
+        if not new_session_id:
+            new_session_id = original_session_id or "CONTINUE"
 
         # if not full_response.strip():
         #     full_response = stdout

@@ -32,7 +32,8 @@ def main():
     for _ in range(3):
         with ar.enter_exp(B, L, S):
             # 2. Simplified History Context (Directly as text)
-            history_text = ar.get_history(L=L, if_improved=False, limit=3, as_text=True)
+            # history_text = ar.get_history(L=L, if_improved=False, limit=3, as_text=True)
+            history_text = ar.get_history(B=B, L=L, if_improved=False, limit=3, as_text=True)
 
             print("Generating experiment hypothesis...")
             hypothesis = agent.ask(f"Previous lessons:\n{history_text}\nPropose a hypothesis.", new_session=True)

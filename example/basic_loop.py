@@ -23,7 +23,8 @@ def main():
     for _ in range(20): # Run for 20 experiment iterations
         with ar.enter_exp(B, L, S): # Enter isolated workspace folder
             # 2. Simplified History Context (Directly as text)
-            history_text = ar.get_history(L=L, if_improved=False, limit=3, as_text=True) # Fetch lessons from failures
+            # history_text = ar.get_history(L=L, if_improved=False, limit=3, as_text=True) # Fetch lessons from failures
+            history_text = ar.get_history(B=B, L=L, if_improved=False, limit=3, as_text=True) # Fetch lessons from failures
 
             print("Generating experiment hypothesis...")
             hypothesis = agent.ask(f"Previous lessons:\n{history_text}\nFirst observe the code and previous lessons, then propose a hypothesis to improve the code.", new_session=True) # Plan next change
